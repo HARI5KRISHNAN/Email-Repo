@@ -77,11 +77,11 @@ services:
       - KEYCLOAK_ISSUER=http://localhost:8080/
       - KEYCLOAK_REALM=pilot180
       - KEYCLOAK_CLIENT_ID=ai-email-assistant
-      - SMTP_HOST=host.docker.internal
+      - SMTP_HOST=postfix
       - SMTP_PORT=25
       - SMTP_SECURE=false
       - SMTP_FROM=no-reply@pilot180.local
-      - IMAP_HOST=host.docker.internal
+      - IMAP_HOST=dovecot
       - IMAP_PORT=143
       - IMAP_SECURE=false
       - MAIL_DOMAIN=pilot180.local
@@ -92,9 +92,10 @@ services:
         condition: service_healthy
       keycloak:
         condition: service_healthy
-    extra_hosts:
-      - "pilot180-postfix:host-gateway"
-      - "pilot180-dovecot:host-gateway"
+      postfix:
+        condition: service_healthy
+      dovecot:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget --spider -q http://localhost:8081/health || exit 1"]
       interval: 10s
