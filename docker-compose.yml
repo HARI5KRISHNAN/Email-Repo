@@ -21,7 +21,7 @@ services:
   keycloak:
     image: quay.io/keycloak/keycloak:23.0
     container_name: pilot180-keycloak
-    command: start-dev
+    command: start-dev --import-realm
     environment:
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
@@ -33,6 +33,8 @@ services:
       KC_HTTP_ENABLED: true
     ports:
       - "8080:8080"
+    volumes:
+      - ./keycloak/pilot180-realm.json:/opt/keycloak/data/import/pilot180-realm.json:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -85,8 +87,10 @@ services:
       - SMTP_RECEIVER_PORT=2525
       - SESSION_SECRET=your_random_secret_change_this_in_production
     depends_on:
-      - postgres
-      - keycloak
+      postgres:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
     extra_hosts:
       - "pilot180-postfix:host-gateway"
       - "pilot180-dovecot:host-gateway"
@@ -96,6 +100,51 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+
+  postfix:
+    image: boky/postfix:latest
+    container_name: pilot180-postfix
+    hostname: mail.pilot180.local
+    restart: always
+    ports:
+      - "25:25"
+      - "587:587"
+    environment:
+      - ALLOWED_SENDER_DOMAINS=pilot180.local
+      - ALLOW_EMPTY_SENDER_DOMAINS=true
+      - HOSTNAME=mail.pilot180.local
+      - MYDOMAIN=pilot180.local
+      - MYORIGIN=pilot180.local
+      - MYNETWORKS=127.0.0.0/8 [::1]/128 172.0.0.0/8
+      - MYDESTINATION=mail.pilot180.local, localhost.pilot180.local, localhost, pilot180.local
+      - LOCAL_RECIPIENT_MAPS=
+    volumes:
+      - ./mailserver/config/postfix/vmailbox:/etc/postfix/vmailbox:ro
+      - ./mailserver/config/postfix/main.cf:/etc/postfix/main.cf:ro
+      - ./mailserver/data/maildir:/var/mail
+      - ./mailserver/init-postfix.sh:/docker-init.db/init-postfix.sh:ro
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "25"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  dovecot:
+    image: dovecot/dovecot:2.3.21
+    container_name: pilot180-dovecot
+    restart: always
+    ports:
+      - "143:143"
+      - "993:993"
+    volumes:
+      - ./mailserver/config/dovecot:/etc/dovecot:ro
+      - ./mailserver/data/maildir:/var/mail
+    healthcheck:
+      test: ["CMD", "doveadm", "auth", "test", "bob@pilot180.local", "password"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
 volumes:
   postgres_data:
