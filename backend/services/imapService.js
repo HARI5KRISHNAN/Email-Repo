@@ -4,7 +4,7 @@ import { saveEmailToDB } from './dbService.js';
 import dotenv from 'dotenv';
 dotenv.config();
 
-export async function syncMailbox(userEmail, password) {
+export async function fetchImapEmails(userEmail, password) {
   const config = {
     imap: {
       user: userEmail,
@@ -20,10 +20,10 @@ export async function syncMailbox(userEmail, password) {
     const connection = await imaps.connect(config);
     await connection.openBox('INBOX');
 
-    const searchCriteria = ['UNSEEN'];
+    const searchCriteria = ['ALL'];
     const fetchOptions = {
       bodies: ['HEADER', 'TEXT'],
-      markSeen: true
+      markSeen: false
     };
 
     const results = await connection.search(searchCriteria, fetchOptions);
@@ -33,15 +33,19 @@ export async function syncMailbox(userEmail, password) {
       const parsed = await simpleParser(all.body);
 
       const email = {
+        messageId: parsed.messageId || `${Date.now()}-${Math.random()}@pilot180.local`,
         from: parsed.from?.text || '',
         to: parsed.to?.text || '',
         subject: parsed.subject || '',
-        body: parsed.text || '',
-        date: parsed.date || new Date()
+        text: parsed.text || '',
+        html: parsed.html || '',
+        date: parsed.date || new Date(),
+        folder: 'INBOX',
+        owner: userEmail
       };
 
       await saveEmailToDB(email);
-      console.log(`📩 Synced new mail for ${userEmail}: ${email.subject}`);
+      console.log(`📩 Synced mail for ${userEmail}: ${email.subject}`);
     }
 
     connection.end();

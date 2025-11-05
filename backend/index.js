@@ -1,71 +1,62 @@
 import express from 'express';
 import cors from 'cors';
-import cron from 'node-cron';
+import session from 'express-session';
 import dotenv from 'dotenv';
-import { syncMailbox } from './services/imapService.js';
-import { fetchInbox, fetchSent } from './services/dbService.js';
-import { sendMail } from './services/smtpService.js';
-import { verifyToken } from './middleware/auth.js';
+import mailRoutes from './routes/mailRoutes.js';
+import { startSmtpServer } from './smtpReceiver.js';
+
 dotenv.config();
 
 const app = express();
+const PORT = process.env.PORT || 8081;
 
 // CORS configuration - allow frontend to make requests
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: process.env.FRONTEND_URL || 'http://localhost:3006',
   credentials: true
 }));
 
+// Body parsing middleware
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-app.get('/api/health', (_, res) => res.json({ status: 'OK' }));
+// Session middleware (required by Keycloak)
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'keyboard cat',
+  resave: false,
+  saveUninitialized: true,
+  cookie: { secure: false } // Set to true if using HTTPS
+}));
 
-// Protected routes - require authentication
-app.get('/api/mail/inbox', verifyToken, async (req, res) => {
-  try {
-    // Use authenticated user's email
-    const userEmail = req.user.email || 'bob@pilot180.local';
-    console.log(`📬 Fetching inbox for ${userEmail}`);
-    const inbox = await fetchInbox(userEmail);
-    res.json(inbox);
-  } catch (err) {
-    console.error('❌ Error fetching inbox:', err);
-    res.status(500).json({ error: err.message });
-  }
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
-app.get('/api/mail/sent', verifyToken, async (req, res) => {
-  try {
-    // Use authenticated user's email
-    const userEmail = req.user.email || 'alice@pilot180.local';
-    console.log(`📤 Fetching sent emails for ${userEmail}`);
-    const sent = await fetchSent(userEmail);
-    res.json(sent);
-  } catch (err) {
-    console.error('❌ Error fetching sent emails:', err);
-    res.status(500).json({ error: err.message });
-  }
+// Mount mail routes
+app.use('/api', mailRoutes);
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Error:', err);
+  res.status(500).json({
+    ok: false,
+    error: err.message || 'Internal server error'
+  });
 });
 
-app.post('/api/mail/send', verifyToken, async (req, res) => {
-  try {
-    const { from, to, subject, body } = req.body;
-    const userEmail = req.user.email || from;
-    console.log(`📧 Sending email from ${userEmail} to ${to}`);
-    await sendMail({ from: userEmail, to, subject, text: body });
-    res.json({ success: true });
-  } catch (err) {
-    console.error('❌ Error sending email:', err);
-    res.status(500).json({ error: err.message });
-  }
+// Start REST API server
+app.listen(PORT, () => {
+  console.log(`🚀 Mail backend API listening on http://localhost:${PORT}`);
+  console.log(`📡 Health check: http://localhost:${PORT}/health`);
 });
 
-const PORT = process.env.PORT || 8081;
-app.listen(PORT, () => console.log(`📡 Mail backend listening on port ${PORT}`));
+// Start SMTP receiver for incoming mail
+try {
+  startSmtpServer();
+  console.log(`📮 SMTP receiver started on port ${process.env.SMTP_RECEIVER_PORT || 2525}`);
+} catch (err) {
+  console.error('❌ Failed to start SMTP receiver:', err.message);
+}
 
-// --- Schedule background IMAP sync every 30s ---
-cron.schedule('*/30 * * * * *', async () => {
-  console.log('🔄 Syncing mailboxes...');
-  await syncMailbox('bob@pilot180.local', '1234');
-  await syncMailbox('alice@pilot180.local', '1234');
-});
+console.log('✅ Backend initialization complete');
