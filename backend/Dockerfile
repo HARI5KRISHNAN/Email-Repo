@@ -18,4 +18,4 @@ RUN chmod +x docker-entrypoint.sh
 EXPOSE 8081 2525
 
 # Use entrypoint script that runs migrations automatically
-ENTRYPOINT ["./docker-entrypoint.sh"]
+ENTRYPOINT ["/bin/sh", "/app/docker-entrypoint.sh"]
