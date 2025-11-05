@@ -22,14 +22,19 @@ export async function fetchImapEmails(userEmail, password) {
 
     const searchCriteria = ['ALL'];
     const fetchOptions = {
-      bodies: ['HEADER', 'TEXT'],
+      bodies: [''], // Fetch entire message
       markSeen: false
     };
 
     const results = await connection.search(searchCriteria, fetchOptions);
 
     for (let res of results) {
-      const all = res.parts.find(p => p.which === 'TEXT');
+      // Get the full message body (empty string fetches entire message)
+      const all = res.parts.find(p => p.which === '');
+      if (!all || !all.body) {
+        console.warn('Skipping email with missing body');
+        continue;
+      }
       const parsed = await simpleParser(all.body);
 
       const email = {
