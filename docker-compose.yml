@@ -121,7 +121,6 @@ services:
       - LOCAL_RECIPIENT_MAPS=
     volumes:
       - ./mailserver/config/postfix/vmailbox:/etc/postfix/vmailbox:ro
-      - ./mailserver/config/postfix/main.cf:/etc/postfix/main.cf:ro
       - ./mailserver/data/maildir:/var/mail
       - ./mailserver/init-postfix.sh:/docker-init.db/init-postfix.sh:ro
     healthcheck:
