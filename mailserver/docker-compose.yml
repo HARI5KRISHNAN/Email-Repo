@@ -1,0 +1,94 @@
+version: "3.9"
+
+services:
+  postfix:
+    image: boky/postfix:latest
+    container_name: pilot180-postfix
+    hostname: mail.pilot180.local
+    restart: always
+    ports:
+      - "25:25"
+      - "587:587"
+    environment:
+      - ALLOWED_SENDER_DOMAINS=pilot180.local
+      - ALLOW_EMPTY_SENDER_DOMAINS=true
+      - HOSTNAME=mail.pilot180.local
+      - LOG_SUBJECT=1
+      - OVERWRITE_FROM=
+      - INBOUND_DEBUGGING=0
+      # Domain and network configuration
+      - MYDOMAIN=pilot180.local
+      - MYORIGIN=pilot180.local
+      - MYNETWORKS=127.0.0.0/8 [::1]/128 172.0.0.0/8
+      - RELAYHOST=
+      - MYDESTINATION=mail.pilot180.local, localhost.pilot180.local, localhost, pilot180.local, mail.pilot180.local
+      # Allow local recipient relaxation
+      - LOCAL_RECIPIENT_MAPS=
+      # OpenDKIM milter configuration (raw postconf format)
+      - "xmilter_default_action=accept"
+      - "xmilter_protocol=6"
+      - "xsmtpd_milters=inet:opendkim:8891"
+      - "xnon_smtpd_milters=inet:opendkim:8891"
+    volumes:
+      - ./data/maildir:/var/mail
+    networks:
+      - mailnet
+    depends_on:
+      - opendkim
+
+  opendkim:
+    image: instrumentisto/opendkim:latest
+    container_name: pilot180-opendkim
+    hostname: opendkim.pilot180.local
+    restart: always
+    ports:
+      - "8891:8891"
+    volumes:
+      - ./config/opendkim:/etc/opendkim
+      - ./config/opendkim/keys:/etc/opendkim/keys
+      - ./config/opendkim/entrypoint.sh:/entrypoint.sh:ro
+    entrypoint: ["/bin/sh", "/entrypoint.sh"]
+    networks:
+      - mailnet
+
+  dovecot:
+    image: dovecot/dovecot:2.3.21
+    container_name: pilot180-dovecot
+    restart: always
+    ports:
+      - "143:143"
+      - "993:993"
+    volumes:
+      - ./config/dovecot:/etc/dovecot
+      - ./data/maildir:/var/mail
+    networks:
+      - mailnet
+
+  maildb:
+    image: postgres:16-alpine
+    container_name: pilot180-mail-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: mailuser
+      POSTGRES_PASSWORD: mailpass
+      POSTGRES_DB: maildb
+    volumes:
+      - ./data/db:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    networks:
+      - mailnet
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: pilot180-mailhog
+    restart: unless-stopped
+    ports:
+      - "1025:1025"   # SMTP for apps
+      - "8025:8025"   # Web UI
+    networks:
+      - mailnet
+
+networks:
+  mailnet:
+    driver: bridge

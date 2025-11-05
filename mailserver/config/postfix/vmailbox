@@ -1,0 +1,6 @@
+# Virtual mailbox mapping for pilot180.local
+# Format: email@domain maildir_path
+
+alice@pilot180.local pilot180.local/alice/
+bob@pilot180.local pilot180.local/bob/
+charlie@pilot180.local pilot180.local/charlie/

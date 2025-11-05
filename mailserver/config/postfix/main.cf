@@ -1,0 +1,66 @@
+# Postfix main configuration for pilot180.local
+# Updated configuration with virtual mailbox support
+
+# Basic settings
+myhostname = mail.pilot180.local
+mydomain = pilot180.local
+myorigin = $mydomain
+mydestination = localhost.pilot180.local, localhost, mail.pilot180.local
+
+# Network settings
+inet_interfaces = all
+inet_protocols = ipv4
+mynetworks = 127.0.0.0/8 [::1]/128 172.0.0.0/8
+
+# Virtual mailbox configuration
+virtual_mailbox_domains = pilot180.local
+virtual_mailbox_base = /var/mail/vhosts
+virtual_mailbox_maps = lmdb:/etc/postfix/vmailbox
+virtual_uid_maps = static:1000
+virtual_gid_maps = static:1000
+
+# Mail delivery
+home_mailbox = Maildir/
+virtual_transport = virtual
+
+# Relay settings
+relayhost =
+relay_domains = $mydestination
+
+# Size limits
+message_size_limit = 51200000
+mailbox_size_limit = 0
+virtual_mailbox_limit = 51200000
+
+# SMTP server settings
+smtpd_banner = $myhostname ESMTP Postfix
+smtpd_recipient_restrictions =
+    permit_mynetworks,
+    permit_sasl_authenticated,
+    reject_unauth_destination
+
+# SASL authentication (disabled for now, enable if needed)
+smtpd_sasl_auth_enable = no
+smtpd_sasl_type = dovecot
+smtpd_sasl_path = private/auth
+smtpd_sasl_security_options = noanonymous
+smtpd_sasl_local_domain = $mydomain
+
+# TLS settings (optional for production)
+smtpd_tls_security_level = may
+smtp_tls_security_level = may
+smtpd_tls_cert_file = /etc/ssl/certs/ssl-cert-snakeoil.pem
+smtpd_tls_key_file = /etc/ssl/private/ssl-cert-snakeoil.key
+
+# Performance tuning
+bounce_queue_lifetime = 1d
+maximal_queue_lifetime = 1d
+
+# OpenDKIM milter configuration (optional)
+milter_default_action = accept
+milter_protocol = 6
+smtpd_milters = inet:opendkim:8891
+non_smtpd_milters = inet:opendkim:8891
+
+# Local recipient maps
+local_recipient_maps = $virtual_mailbox_maps

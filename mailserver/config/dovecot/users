@@ -1,0 +1,6 @@
+# Dovecot password file
+# Format: username:password:uid:gid:gecos:home:shell:extra_fields
+# For development: plain text passwords (use {PLAIN} scheme)
+alice@pilot180.local:{PLAIN}password:1000:1000::/var/mail/vhosts/pilot180.local/alice::
+bob@pilot180.local:{PLAIN}password:1000:1000::/var/mail/vhosts/pilot180.local/bob::
+charlie@pilot180.local:{PLAIN}password:1000:1000::/var/mail/vhosts/pilot180.local/charlie::
