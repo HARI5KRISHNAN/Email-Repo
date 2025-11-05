@@ -22,7 +22,7 @@ export async function saveEmailToDB(email) {
   const query = `
     INSERT INTO mails (message_id, from_address, to_addresses, subject, body_text, body_html, folder, owner, created_at)
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-    ON CONFLICT (message_id) DO NOTHING
+    ON CONFLICT (message_id, folder, owner) DO NOTHING
   `;
 
   try {
