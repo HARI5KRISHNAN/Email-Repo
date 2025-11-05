@@ -1,5 +1,4 @@
 #!/bin/sh
-set -e
 
 echo "🚀 Starting Pilot180 Mail Backend..."
 echo "=================================="
