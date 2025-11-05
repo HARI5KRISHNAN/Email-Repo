@@ -11,8 +11,24 @@ const app = express();
 const PORT = process.env.PORT || 8081;
 
 // CORS configuration - allow frontend to make requests
+const allowedOrigins = [
+  'http://localhost:3006',
+  'http://localhost:3007',
+  'http://localhost:5173', // Vite default
+  process.env.FRONTEND_URL
+].filter(Boolean);
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3006',
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 }));
 
