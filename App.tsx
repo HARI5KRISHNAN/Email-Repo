@@ -41,6 +41,8 @@ function App({ keycloak }: KeycloakProps) {
         let endpoint = '/mail/inbox';
         if (selectedFolder === 'sent') {
           endpoint = '/mail/sent';
+        } else if (selectedFolder === 'important') {
+          endpoint = '/mail/important';
         }
 
         const response = await api.get<EmailListResponse>(endpoint);
@@ -65,6 +67,8 @@ function App({ keycloak }: KeycloakProps) {
         let endpoint = '/mail/inbox';
         if (selectedFolder === 'sent') {
           endpoint = '/mail/sent';
+        } else if (selectedFolder === 'important') {
+          endpoint = '/mail/important';
         }
         const response = await api.get<EmailListResponse>(endpoint);
         const transformedEmails = transformBackendEmails(response.data.rows, selectedFolder as any);
