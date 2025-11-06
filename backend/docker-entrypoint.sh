@@ -1,22 +1,17 @@
 #!/bin/sh
-set -e
 
-echo "🚀 Starting Pilot180 Mail Backend..."
-echo "=================================="
+echo "Starting Pilot180 Mail Backend..."
 
-# Wait for PostgreSQL to be ready
-echo "⏳ Waiting for PostgreSQL..."
+echo "Waiting for PostgreSQL..."
 until nc -z $PGHOST $PGPORT; do
   echo "Waiting for PostgreSQL at $PGHOST:$PGPORT..."
   sleep 2
 done
-echo "✅ PostgreSQL is ready!"
+echo "PostgreSQL is ready!"
 
-# Run database migrations
-echo "📦 Running database migrations..."
+echo "Running database migrations..."
 node scripts/migrate.js
-echo "✅ Migrations complete!"
+echo "Migrations complete!"
 
-# Start the application
-echo "🚀 Starting application..."
+echo "Starting application..."
 exec node index.js

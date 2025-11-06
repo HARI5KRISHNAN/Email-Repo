@@ -22,6 +22,7 @@ function App({ keycloak }: KeycloakProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCompose, setShowCompose] = useState(false);
+  const [folderCounts, setFolderCounts] = useState<{ inbox: number; sent: number; important: number }>({ inbox: 0, sent: 0, important: 0 });
 
   // Load pinned threads from localStorage
   useEffect(() => {
@@ -30,6 +31,18 @@ function App({ keycloak }: KeycloakProps) {
         setPinnedThreadIds(JSON.parse(storedPins));
     }
   }, []);
+
+  // Fetch folder counts
+  const fetchCounts = async () => {
+    try {
+      const response = await api.get('/mail/counts');
+      if (response.data.ok) {
+        setFolderCounts(response.data.counts);
+      }
+    } catch (err) {
+      console.error('Failed to fetch folder counts:', err);
+    }
+  };
 
   // Fetch emails from backend
   useEffect(() => {
@@ -41,11 +54,14 @@ function App({ keycloak }: KeycloakProps) {
         let endpoint = '/mail/inbox';
         if (selectedFolder === 'sent') {
           endpoint = '/mail/sent';
+        } else if (selectedFolder === 'important') {
+          endpoint = '/mail/important';
         }
 
         const response = await api.get<EmailListResponse>(endpoint);
         const transformedEmails = transformBackendEmails(response.data.rows, selectedFolder as any);
         setEmails(transformedEmails);
+        await fetchCounts();
       } catch (err: any) {
         console.error('Failed to fetch emails:', err);
         setError(err.message || 'Failed to load emails');
@@ -65,6 +81,8 @@ function App({ keycloak }: KeycloakProps) {
         let endpoint = '/mail/inbox';
         if (selectedFolder === 'sent') {
           endpoint = '/mail/sent';
+        } else if (selectedFolder === 'important') {
+          endpoint = '/mail/important';
         }
         const response = await api.get<EmailListResponse>(endpoint);
         const transformedEmails = transformBackendEmails(response.data.rows, selectedFolder as any);
@@ -86,6 +104,54 @@ function App({ keycloak }: KeycloakProps) {
         localStorage.setItem('pinnedThreadIds', JSON.stringify(newPinnedIds));
         return newPinnedIds;
     });
+  };
+
+  const handleStarToggle = (emailId: string, isStarred: boolean) => {
+    setEmails(prev => prev.map(email =>
+      email.id === emailId ? { ...email, isStarred } : email
+    ));
+    fetchCounts();
+  };
+
+  const handleThreadSelect = async (threadId: string) => {
+    setSelectedThreadId(threadId);
+
+    // Mark all unread emails in the thread as read
+    const thread = threads[threadId];
+    if (thread) {
+      const unreadEmails = thread.filter(email => !email.isRead);
+      for (const email of unreadEmails) {
+        try {
+          await api.patch(`/mail/${email.id}/read`);
+        } catch (err) {
+          console.error('Failed to mark email as read:', err);
+        }
+      }
+
+      // Update local state
+      setEmails(prev => prev.map(email =>
+        unreadEmails.some(e => e.id === email.id) ? { ...email, isRead: true } : email
+      ));
+
+      // Refresh counts
+      fetchCounts();
+    }
+  };
+
+  const handleMarkAsUnread = async (emailId: string) => {
+    try {
+      await api.patch(`/mail/${emailId}/unread`);
+
+      // Update local state
+      setEmails(prev => prev.map(email =>
+        email.id === emailId ? { ...email, isRead: false } : email
+      ));
+
+      // Refresh counts
+      fetchCounts();
+    } catch (err) {
+      console.error('Failed to mark email as unread:', err);
+    }
   };
 
   const threads = useMemo(() => {
@@ -111,6 +177,10 @@ function App({ keycloak }: KeycloakProps) {
     // Filter threads based on folder and search query
     const filteredThreads = allThreads
         .filter(thread => {
+            // Important folder is a virtual folder showing starred emails from all folders
+            if (selectedFolder === 'important') {
+                return true;
+            }
             const latestMessage = thread[0];
             return latestMessage.folder === selectedFolder;
         })
@@ -171,6 +241,7 @@ function App({ keycloak }: KeycloakProps) {
               setSelectedThreadId(null);
           }}
           onCompose={() => setShowCompose(true)}
+          counts={folderCounts}
         />
         <main className="flex flex-1 overflow-hidden border-l border-slate-200">
           <div className="w-full md:w-[350px] lg:w-[400px] xl:w-[450px] bg-white border-r border-slate-200 flex-shrink-0">
@@ -189,18 +260,19 @@ function App({ keycloak }: KeycloakProps) {
               <EmailList
                 threads={displayThreads}
                 selectedThreadId={selectedThreadId}
-                onSelectThread={setSelectedThreadId}
+                onSelectThread={handleThreadSelect}
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
                 sortOrder={sortOrder}
                 onSortChange={setSortOrder}
                 pinnedThreadIds={pinnedThreadIds}
                 onTogglePin={togglePinThread}
+                onStarToggle={handleStarToggle}
               />
             )}
           </div>
           <div className="flex-1 bg-white hidden md:block">
-            <EmailDetail thread={selectedThread} />
+            <EmailDetail thread={selectedThread} onMarkAsUnread={handleMarkAsUnread} />
           </div>
         </main>
       </div>
