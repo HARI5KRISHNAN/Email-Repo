@@ -22,7 +22,7 @@ function App({ keycloak }: KeycloakProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCompose, setShowCompose] = useState(false);
-  const [folderCounts, setFolderCounts] = useState<{ inbox: number; sent: number; important: number }>({ inbox: 0, sent: 0, important: 0 });
+  const [folderCounts, setFolderCounts] = useState<{ inbox: number; sent: number; important: number; spam: number; trash: number }>({ inbox: 0, sent: 0, important: 0, spam: 0, trash: 0 });
 
   // Load pinned threads from localStorage
   useEffect(() => {
@@ -56,6 +56,10 @@ function App({ keycloak }: KeycloakProps) {
           endpoint = '/mail/sent';
         } else if (selectedFolder === 'important') {
           endpoint = '/mail/important';
+        } else if (selectedFolder === 'spam') {
+          endpoint = '/mail/spam';
+        } else if (selectedFolder === 'trash') {
+          endpoint = '/mail/trash';
         }
 
         const response = await api.get<EmailListResponse>(endpoint);
@@ -83,6 +87,10 @@ function App({ keycloak }: KeycloakProps) {
           endpoint = '/mail/sent';
         } else if (selectedFolder === 'important') {
           endpoint = '/mail/important';
+        } else if (selectedFolder === 'spam') {
+          endpoint = '/mail/spam';
+        } else if (selectedFolder === 'trash') {
+          endpoint = '/mail/trash';
         }
         const response = await api.get<EmailListResponse>(endpoint);
         const transformedEmails = transformBackendEmails(response.data.rows, selectedFolder as any);

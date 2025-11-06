@@ -45,6 +45,7 @@ export const folders: Folder[] = [
   { id: 'sent', name: 'Sent mail', icon: <SendIcon className="w-5 h-5" /> },
   { id: 'important', name: 'Important', icon: <StarIcon className="w-5 h-5" /> },
   { id: 'draft', name: 'Draft', icon: <DraftIcon className="w-5 h-5" /> },
+  { id: 'spam', name: 'Spam', icon: <ArchiveIcon className="w-5 h-5" /> },
   { id: 'trash', name: 'Trash', icon: <TrashIcon className="w-5 h-5" /> },
   { id: 'schedule', name: 'Schedule Meeting', icon: <ScheduleIcon className="w-5 h-5" /> },
   { id: 'calendar', name: 'Calendar', icon: <CalendarIcon className="w-5 h-5" /> },

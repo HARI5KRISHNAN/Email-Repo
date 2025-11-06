@@ -62,6 +62,46 @@ router.get('/mail/sent', authenticateToken, async (req, res) => {
   }
 });
 
+// get spam folder for logged-in user
+router.get('/mail/spam', authenticateToken, async (req, res) => {
+  const user = getUsername(req);
+  try {
+    const mailDomain = process.env.MAIL_DOMAIN || 'pilot180.local';
+    const userEmail = user.includes('@') ? user : `${user}@${mailDomain}`;
+
+    const q = await db.query(
+      `SELECT id, message_id, from_address, to_addresses, subject, body_text, body_html, folder, owner, is_starred, is_read, is_spam, created_at
+       FROM mails
+       WHERE (owner = $1 OR $2 = ANY(to_addresses)) AND folder = 'SPAM'
+       ORDER BY created_at DESC LIMIT 200`, [user, userEmail]
+    );
+    res.json({ ok: true, rows: q.rows });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// get trash folder for logged-in user
+router.get('/mail/trash', authenticateToken, async (req, res) => {
+  const user = getUsername(req);
+  try {
+    const mailDomain = process.env.MAIL_DOMAIN || 'pilot180.local';
+    const userEmail = user.includes('@') ? user : `${user}@${mailDomain}`;
+
+    const q = await db.query(
+      `SELECT id, message_id, from_address, to_addresses, subject, body_text, body_html, folder, owner, is_starred, is_read, is_spam, created_at
+       FROM mails
+       WHERE (owner = $1 OR $2 = ANY(to_addresses)) AND folder = 'TRASH'
+       ORDER BY created_at DESC LIMIT 200`, [user, userEmail]
+    );
+    res.json({ ok: true, rows: q.rows });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 // get starred/important emails for logged-in user
 router.get('/mail/important', authenticateToken, async (req, res) => {
   const user = getUsername(req);
@@ -96,7 +136,9 @@ router.get('/mail/counts', authenticateToken, async (req, res) => {
       SELECT
         COUNT(*) FILTER (WHERE folder = 'INBOX' AND is_read = false) as inbox_unread,
         COUNT(*) FILTER (WHERE folder = 'SENT' AND is_read = false) as sent_unread,
-        COUNT(*) FILTER (WHERE is_starred = true AND is_read = false) as important_unread
+        COUNT(*) FILTER (WHERE is_starred = true AND is_read = false) as important_unread,
+        COUNT(*) FILTER (WHERE folder = 'SPAM') as spam_unread,
+        COUNT(*) FILTER (WHERE folder = 'TRASH') as trash_unread
       FROM mails
       WHERE owner = $1 OR $2 = ANY(to_addresses)
     `, [user, userEmail]);
@@ -106,7 +148,9 @@ router.get('/mail/counts', authenticateToken, async (req, res) => {
       counts: {
         inbox: parseInt(counts.rows[0].inbox_unread),
         sent: parseInt(counts.rows[0].sent_unread),
-        important: parseInt(counts.rows[0].important_unread)
+        important: parseInt(counts.rows[0].important_unread),
+        spam: parseInt(counts.rows[0].spam_unread),
+        trash: parseInt(counts.rows[0].trash_unread)
       }
     };
     console.log(`📊 Returning counts:`, result.counts);
@@ -293,6 +337,173 @@ router.patch('/mail/:id/star', authenticateToken, async (req, res) => {
     res.json({ ok: true, isStarred });
   } catch (err) {
     console.error(err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// Move single email to folder (INBOX, SPAM, TRASH, ARCHIVE)
+router.post('/mail/:id/move', authenticateToken, async (req, res) => {
+  const user = getUsername(req);
+  const id = req.params.id;
+  const { to } = req.body;
+
+  try {
+    if (!to) {
+      return res.status(400).json({ ok: false, error: 'Missing target folder "to"' });
+    }
+
+    const mailDomain = process.env.MAIL_DOMAIN || 'pilot180.local';
+    const userEmail = user.includes('@') ? user : `${user}@${mailDomain}`;
+
+    // Check if user has permission
+    const checkQ = await db.query(
+      'SELECT owner, to_addresses FROM mails WHERE id=$1',
+      [id]
+    );
+
+    if (!checkQ.rows.length) {
+      return res.status(404).json({ ok: false, error: 'Email not found' });
+    }
+
+    const mail = checkQ.rows[0];
+    if (mail.owner !== user && !(mail.to_addresses || []).includes(userEmail)) {
+      return res.status(403).json({ ok: false, error: 'Forbidden' });
+    }
+
+    // Move to folder and update is_spam if moving to SPAM
+    const updateQ = 'UPDATE mails SET folder = $1, is_spam = ($1 = $2) WHERE id = $3 RETURNING *';
+    const result = await db.query(updateQ, [to, 'SPAM', id]);
+
+    res.json({ ok: true, mail: result.rows[0] });
+  } catch (err) {
+    console.error('Move mail error:', err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// Delete single email (soft delete -> move to TRASH)
+router.delete('/mail/:id', authenticateToken, async (req, res) => {
+  const user = getUsername(req);
+  const id = req.params.id;
+
+  try {
+    const mailDomain = process.env.MAIL_DOMAIN || 'pilot180.local';
+    const userEmail = user.includes('@') ? user : `${user}@${mailDomain}`;
+
+    // Check if user has permission
+    const checkQ = await db.query(
+      'SELECT owner, to_addresses FROM mails WHERE id=$1',
+      [id]
+    );
+
+    if (!checkQ.rows.length) {
+      return res.status(404).json({ ok: false, error: 'Email not found' });
+    }
+
+    const mail = checkQ.rows[0];
+    if (mail.owner !== user && !(mail.to_addresses || []).includes(userEmail)) {
+      return res.status(403).json({ ok: false, error: 'Forbidden' });
+    }
+
+    // Soft delete: move to TRASH
+    await db.query('UPDATE mails SET folder = $1 WHERE id = $2', ['TRASH', id]);
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Delete mail error:', err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// Bulk actions endpoint
+router.post('/mail/bulk', authenticateToken, async (req, res) => {
+  const user = getUsername(req);
+  const { ids, action, to } = req.body;
+
+  try {
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ ok: false, error: 'ids array is required' });
+    }
+
+    const mailDomain = process.env.MAIL_DOMAIN || 'pilot180.local';
+    const userEmail = user.includes('@') ? user : `${user}@${mailDomain}`;
+
+    // Verify user has permission for all emails
+    const checkQ = await db.query(
+      'SELECT id FROM mails WHERE id = ANY($1::int[]) AND (owner = $2 OR $3 = ANY(to_addresses))',
+      [ids, user, userEmail]
+    );
+
+    const allowedIds = checkQ.rows.map(row => row.id);
+    if (allowedIds.length === 0) {
+      return res.status(403).json({ ok: false, error: 'No permission for these emails' });
+    }
+
+    // Perform action
+    if (action === 'delete') {
+      await db.query('UPDATE mails SET folder = $1 WHERE id = ANY($2::int[])', ['TRASH', allowedIds]);
+      return res.json({ ok: true, count: allowedIds.length });
+    }
+
+    if (action === 'spam') {
+      await db.query(
+        'UPDATE mails SET folder = $1, is_spam = true WHERE id = ANY($2::int[])',
+        ['SPAM', allowedIds]
+      );
+      return res.json({ ok: true, count: allowedIds.length });
+    }
+
+    if (action === 'move') {
+      if (!to) {
+        return res.status(400).json({ ok: false, error: 'to folder is required for move action' });
+      }
+      await db.query('UPDATE mails SET folder = $1 WHERE id = ANY($2::int[])', [to, allowedIds]);
+      return res.json({ ok: true, count: allowedIds.length });
+    }
+
+    if (action === 'read' || action === 'unread') {
+      const readVal = action === 'read';
+      await db.query('UPDATE mails SET is_read = $1 WHERE id = ANY($2::int[])', [readVal, allowedIds]);
+      return res.json({ ok: true, count: allowedIds.length });
+    }
+
+    res.status(400).json({ ok: false, error: 'Unknown action' });
+  } catch (err) {
+    console.error('Bulk action error:', err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// Permanent delete endpoint (use with caution)
+router.delete('/mail/:id/permanent', authenticateToken, async (req, res) => {
+  const user = getUsername(req);
+  const id = req.params.id;
+
+  try {
+    const mailDomain = process.env.MAIL_DOMAIN || 'pilot180.local';
+    const userEmail = user.includes('@') ? user : `${user}@${mailDomain}`;
+
+    // Check if user has permission
+    const checkQ = await db.query(
+      'SELECT owner, to_addresses FROM mails WHERE id=$1',
+      [id]
+    );
+
+    if (!checkQ.rows.length) {
+      return res.status(404).json({ ok: false, error: 'Email not found' });
+    }
+
+    const mail = checkQ.rows[0];
+    if (mail.owner !== user && !(mail.to_addresses || []).includes(userEmail)) {
+      return res.status(403).json({ ok: false, error: 'Forbidden' });
+    }
+
+    // Permanent delete from database
+    await db.query('DELETE FROM mails WHERE id = $1', [id]);
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Permanent delete error:', err);
     res.status(500).json({ ok: false, error: err.message });
   }
 });
