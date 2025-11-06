@@ -204,10 +204,12 @@ router.patch('/mail/:id/read', authenticateToken, async (req, res) => {
     }
 
     // Mark as read
-    await db.query(
+    console.log(`Marking email ${id} as read for user ${user}`);
+    const updateResult = await db.query(
       'UPDATE mails SET is_read = true WHERE id = $1',
       [id]
     );
+    console.log(`Update result:`, updateResult.rowCount, 'rows affected');
 
     res.json({ ok: true });
   } catch (err) {
