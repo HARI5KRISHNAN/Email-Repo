@@ -126,6 +126,7 @@ services:
       - POSTFIX_virtual_uid_maps=static:1000
       - POSTFIX_virtual_gid_maps=static:1000
       - POSTFIX_virtual_transport=virtual
+      - POSTFIX_virtual_mailbox_limit=0
     volumes:
       - ./mailserver/config/postfix/vmailbox:/etc/postfix/vmailbox:ro
       - ./mailserver/data/maildir:/var/mail
