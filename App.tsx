@@ -268,6 +268,7 @@ function App({ keycloak }: KeycloakProps) {
                 pinnedThreadIds={pinnedThreadIds}
                 onTogglePin={togglePinThread}
                 onStarToggle={handleStarToggle}
+                onMarkAsUnread={handleMarkAsUnread}
               />
             )}
           </div>
