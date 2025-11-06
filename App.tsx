@@ -121,6 +121,10 @@ function App({ keycloak }: KeycloakProps) {
     // Filter threads based on folder and search query
     const filteredThreads = allThreads
         .filter(thread => {
+            // Important folder is a virtual folder showing starred emails from all folders
+            if (selectedFolder === 'important') {
+                return true;
+            }
             const latestMessage = thread[0];
             return latestMessage.folder === selectedFolder;
         })
