@@ -118,8 +118,14 @@ services:
       - MYDOMAIN=pilot180.local
       - MYORIGIN=pilot180.local
       - MYNETWORKS=127.0.0.0/8 [::1]/128 172.0.0.0/8
-      - MYDESTINATION=mail.pilot180.local, localhost.pilot180.local, localhost, pilot180.local
+      - MYDESTINATION=mail.pilot180.local, localhost.pilot180.local, localhost
       - LOCAL_RECIPIENT_MAPS=
+      - POSTFIX_virtual_mailbox_domains=pilot180.local
+      - POSTFIX_virtual_mailbox_base=/var/mail/vhosts
+      - POSTFIX_virtual_mailbox_maps=lmdb:/etc/postfix/vmailbox
+      - POSTFIX_virtual_uid_maps=static:1000
+      - POSTFIX_virtual_gid_maps=static:1000
+      - POSTFIX_virtual_transport=virtual
     volumes:
       - ./mailserver/config/postfix/vmailbox:/etc/postfix/vmailbox:ro
       - ./mailserver/data/maildir:/var/mail
