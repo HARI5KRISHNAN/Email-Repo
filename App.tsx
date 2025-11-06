@@ -88,6 +88,12 @@ function App({ keycloak }: KeycloakProps) {
     });
   };
 
+  const handleStarToggle = (emailId: string, isStarred: boolean) => {
+    setEmails(prev => prev.map(email =>
+      email.id === emailId ? { ...email, isStarred } : email
+    ));
+  };
+
   const threads = useMemo(() => {
     const groups: { [key: string]: Email[] } = {};
     emails.forEach(email => {
@@ -196,6 +202,7 @@ function App({ keycloak }: KeycloakProps) {
                 onSortChange={setSortOrder}
                 pinnedThreadIds={pinnedThreadIds}
                 onTogglePin={togglePinThread}
+                onStarToggle={handleStarToggle}
               />
             )}
           </div>

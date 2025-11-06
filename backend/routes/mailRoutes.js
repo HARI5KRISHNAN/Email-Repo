@@ -33,7 +33,7 @@ router.get('/mail/inbox', authenticateToken, async (req, res) => {
 
     // fetch mails where owner = user OR user is in to_addresses
     const q = await db.query(
-      `SELECT id, message_id, from_address, to_addresses, subject, body_text, body_html, folder, owner, created_at
+      `SELECT id, message_id, from_address, to_addresses, subject, body_text, body_html, folder, owner, is_starred, created_at
        FROM mails
        WHERE owner = $1 OR $2 = ANY(to_addresses)
        ORDER BY created_at DESC LIMIT 200`, [user, userEmail]
@@ -50,7 +50,7 @@ router.get('/mail/sent', authenticateToken, async (req, res) => {
   const user = getUsername(req);
   try {
     const q = await db.query(
-      `SELECT id, message_id, from_address, to_addresses, subject, body_text, body_html, folder, owner, created_at
+      `SELECT id, message_id, from_address, to_addresses, subject, body_text, body_html, folder, owner, is_starred, created_at
        FROM mails
        WHERE owner = $1 AND folder = 'SENT'
        ORDER BY created_at DESC LIMIT 200`, [user]
@@ -121,6 +121,45 @@ router.get('/mail/search', authenticateToken, async (req, res) => {
        ORDER BY created_at DESC LIMIT 200`, [user, `%${qtext}%`]
     );
     res.json({ ok: true, rows: q.rows });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// toggle star on email
+router.patch('/mail/:id/star', authenticateToken, async (req, res) => {
+  const user = getUsername(req);
+  const id = req.params.id;
+  const { isStarred } = req.body;
+
+  try {
+    // Construct full email address for permission check
+    const mailDomain = process.env.MAIL_DOMAIN || 'pilot180.local';
+    const userEmail = user.includes('@') ? user : `${user}@${mailDomain}`;
+
+    // Check if user has permission to star this email
+    const checkQ = await db.query(
+      'SELECT owner, to_addresses FROM mails WHERE id=$1',
+      [id]
+    );
+
+    if (!checkQ.rows.length) {
+      return res.status(404).json({ ok: false, error: 'Email not found' });
+    }
+
+    const mail = checkQ.rows[0];
+    if (mail.owner !== user && !(mail.to_addresses || []).includes(userEmail)) {
+      return res.status(403).json({ ok: false, error: 'Forbidden' });
+    }
+
+    // Update the starred status
+    await db.query(
+      'UPDATE mails SET is_starred = $1 WHERE id = $2',
+      [isStarred, id]
+    );
+
+    res.json({ ok: true, isStarred });
   } catch (err) {
     console.error(err);
     res.status(500).json({ ok: false, error: err.message });

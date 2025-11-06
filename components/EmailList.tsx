@@ -3,6 +3,7 @@ import React from 'react';
 import { Email } from '../types';
 import { ArchiveIcon, PinIcon, SearchIcon, StarIcon, UnreadIcon } from '../constants';
 import { SortOrder } from '../App';
+import api from '../api';
 
 interface ThreadListItemProps {
     thread: Email[];
@@ -10,12 +11,27 @@ interface ThreadListItemProps {
     onSelect: (threadId: string) => void;
     isPinned: boolean;
     onTogglePin: (threadId: string) => void;
+    onStarToggle: (emailId: string, isStarred: boolean) => void;
 }
 
-const ThreadListItem: React.FC<ThreadListItemProps> = ({ thread, isSelected, onSelect, isPinned, onTogglePin }) => {
+const ThreadListItem: React.FC<ThreadListItemProps> = ({ thread, isSelected, onSelect, isPinned, onTogglePin, onStarToggle }) => {
     const latestMessage = thread[0];
     const threadCount = thread.length;
     const isThreadUnread = thread.some(e => !e.isRead);
+
+    const handleStarClick = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        const newStarredState = !latestMessage.isStarred;
+
+        try {
+            await api.patch(`/mail/${latestMessage.id}/star`, {
+                isStarred: newStarredState
+            });
+            onStarToggle(latestMessage.id, newStarredState);
+        } catch (error) {
+            console.error('Failed to toggle star:', error);
+        }
+    };
 
     const timeAgo = (dateString: string) => {
         const date = new Date(dateString);
@@ -85,7 +101,7 @@ const ThreadListItem: React.FC<ThreadListItemProps> = ({ thread, isSelected, onS
                     <p className={`${isThreadUnread ? 'font-semibold text-slate-900' : 'font-medium text-slate-600'} text-sm truncate`}>{latestMessage.subject.replace(/Re: /g, '')}</p>
                     <p className="text-xs text-slate-500 truncate">{latestMessage.snippet}</p>
                 </div>
-                <button onClick={(e) => { e.stopPropagation(); /* Handle star */ }} className={`mt-0.5 ${latestMessage.isStarred ? 'text-yellow-500' : 'text-slate-300 hover:text-yellow-400'}`}>
+                <button onClick={handleStarClick} className={`mt-0.5 ${latestMessage.isStarred ? 'text-yellow-500' : 'text-slate-300 hover:text-yellow-400'}`}>
                     <StarIcon isFilled={latestMessage.isStarred} className="w-5 h-5" />
                 </button>
             </div>
@@ -103,9 +119,10 @@ interface EmailListProps {
     onSortChange: (order: SortOrder) => void;
     pinnedThreadIds: string[];
     onTogglePin: (threadId: string) => void;
+    onStarToggle: (emailId: string, isStarred: boolean) => void;
 }
 
-const EmailList = ({ threads, selectedThreadId, onSelectThread, searchQuery, onSearchChange, sortOrder, onSortChange, pinnedThreadIds, onTogglePin }: EmailListProps) => {
+const EmailList = ({ threads, selectedThreadId, onSelectThread, searchQuery, onSearchChange, sortOrder, onSortChange, pinnedThreadIds, onTogglePin, onStarToggle }: EmailListProps) => {
     const unreadCount = threads.reduce((count, thread) => {
         return count + (thread.some(e => !e.isRead) ? 1 : 0);
     }, 0);
@@ -145,13 +162,14 @@ const EmailList = ({ threads, selectedThreadId, onSelectThread, searchQuery, onS
             </div>
             <div className="flex-1 overflow-y-auto">
                 {threads.map(thread => (
-                    <ThreadListItem 
-                        key={thread[0].threadId} 
+                    <ThreadListItem
+                        key={thread[0].threadId}
                         thread={thread}
                         isSelected={selectedThreadId === thread[0].threadId}
                         onSelect={onSelectThread}
                         isPinned={pinnedThreadIds.includes(thread[0].threadId)}
                         onTogglePin={onTogglePin}
+                        onStarToggle={onStarToggle}
                     />
                 ))}
             </div>

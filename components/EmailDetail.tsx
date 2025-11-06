@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import { Email, ToolbarItem, Recipient } from '../types';
 import { ALL_TOOLBAR_ITEMS, DEFAULT_TOOLBAR_ITEM_IDS, DotsVerticalIcon, ReplyIcon, UnreadIcon, StarIcon, ArchiveIcon, PaperclipIcon, ChevronDownIcon, CogIcon, SignatureIcon, ReplyAllIcon, SparklesIcon } from '../constants';
+import api from '../api';
 
 const isValidEmail = (email: string): boolean => {
   // A simple regex for email validation
@@ -759,6 +760,21 @@ const EmailDetail = ({ thread }: EmailDetailProps) => {
         setExpandedMessageId(prev => (prev === messageId ? null : messageId));
     };
 
+    const handleStarToggle = async () => {
+        const newStarredState = !isStarred;
+        setIsStarred(newStarredState);
+
+        try {
+            await api.patch(`/mail/${latestMessage.id}/star`, {
+                isStarred: newStarredState
+            });
+        } catch (error) {
+            console.error('Failed to toggle star:', error);
+            // Revert on error
+            setIsStarred(!newStarredState);
+        }
+    };
+
     const handleReply = () => {
         setReplyTo([{ name: latestMessage.sender, email: latestMessage.senderEmail }]);
         setReplyCc([]);
@@ -850,8 +866,8 @@ const EmailDetail = ({ thread }: EmailDetailProps) => {
                             {isSummarizing ? 'Summarizing...' : 'Summarize'}
                         </button>
                         <div className="h-6 border-l border-slate-300"></div>
-                        <button 
-                            onClick={() => setIsStarred(p => !p)}
+                        <button
+                            onClick={handleStarToggle}
                             className={`p-2 border border-transparent rounded-lg hover:bg-slate-100 ${isStarred ? 'text-yellow-500' : 'text-slate-500 hover:text-slate-800'}`}
                             title={isStarred ? "Unstar this conversation" : "Star this conversation"}
                             aria-label={isStarred ? "Unstar this conversation" : "Star this conversation"}
