@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import { Email, ToolbarItem, Recipient } from '../types';
-import { ALL_TOOLBAR_ITEMS, DEFAULT_TOOLBAR_ITEM_IDS, DotsVerticalIcon, ReplyIcon, UnreadIcon, StarIcon, ArchiveIcon, PaperclipIcon, ChevronDownIcon, CogIcon, SignatureIcon, ReplyAllIcon, SparklesIcon } from '../constants';
+import { ALL_TOOLBAR_ITEMS, DEFAULT_TOOLBAR_ITEM_IDS, DotsVerticalIcon, ReplyIcon, UnreadIcon, StarIcon, PaperclipIcon, ChevronDownIcon, CogIcon, SignatureIcon, ReplyAllIcon, SparklesIcon } from '../constants';
 import api from '../api';
 
 const isValidEmail = (email: string): boolean => {
@@ -675,9 +675,10 @@ const ThreadMessage: React.FC<ThreadMessageProps> = ({ email, isExpanded, onTogg
 
 interface EmailDetailProps {
     thread: Email[] | null;
+    onMarkAsUnread?: (emailId: string) => void;
 }
 
-const EmailDetail = ({ thread }: EmailDetailProps) => {
+const EmailDetail = ({ thread, onMarkAsUnread }: EmailDetailProps) => {
     const [isStarred, setIsStarred] = useState(false);
     const [isReplying, setIsReplying] = useState(false);
     const [replyTo, setReplyTo] = useState<Recipient[]>([]);
@@ -874,10 +875,12 @@ const EmailDetail = ({ thread }: EmailDetailProps) => {
                         >
                             <StarIcon className="w-5 h-5" isFilled={isStarred} />
                         </button>
-                        <button className="p-2 border border-transparent rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-800" title="Archive" aria-label="Archive this conversation">
-                            <ArchiveIcon className="w-5 h-5" />
-                        </button>
-                         <button className="p-2 border border-transparent rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-800" title="Mark as unread" aria-label="Mark as unread">
+                        <button
+                            onClick={() => onMarkAsUnread && onMarkAsUnread(latestMessage.id)}
+                            className="p-2 border border-transparent rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-800"
+                            title="Mark as unread"
+                            aria-label="Mark as unread"
+                        >
                             <UnreadIcon className="w-5 h-5" />
                         </button>
                         <button className="p-2 border border-transparent rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-800" aria-label="More conversation options">

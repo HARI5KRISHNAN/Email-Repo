@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Email } from '../types';
-import { ArchiveIcon, PinIcon, SearchIcon, StarIcon, UnreadIcon } from '../constants';
+import { PinIcon, SearchIcon, StarIcon, UnreadIcon } from '../constants';
 import { SortOrder } from '../App';
 import api from '../api';
 
@@ -78,17 +78,9 @@ const ThreadListItem: React.FC<ThreadListItemProps> = ({ thread, isSelected, onS
                                 >
                                     <PinIcon className="w-5 h-5" isFilled={isPinned} />
                                 </button>
-                                <button 
-                                    onClick={(e) => { e.stopPropagation(); console.log('Archive clicked'); }} 
-                                    title="Archive" 
-                                    className="p-1 rounded-full hover:bg-slate-200 hover:text-slate-800"
-                                    aria-label="Archive"
-                                >
-                                    <ArchiveIcon className="w-5 h-5" />
-                                </button>
-                                <button 
-                                    onClick={(e) => { e.stopPropagation(); console.log('Mark as unread clicked'); }} 
-                                    title="Mark as unread" 
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); console.log('Mark as unread clicked'); }}
+                                    title="Mark as unread"
                                     className="p-1 rounded-full hover:bg-slate-200 hover:text-slate-800"
                                     aria-label="Mark as unread"
                                 >

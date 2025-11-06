@@ -7,9 +7,10 @@ interface SidebarProps {
     selectedFolder: string;
     onSelectFolder: (folderId: Folder['id']) => void;
     onCompose?: () => void;
+    counts?: { inbox: number; sent: number; important: number };
 }
 
-const Sidebar = ({ folders, selectedFolder, onSelectFolder, onCompose }: SidebarProps) => {
+const Sidebar = ({ folders, selectedFolder, onSelectFolder, onCompose, counts }: SidebarProps) => {
     return (
         <aside className="w-64 bg-white flex-shrink-0 px-4 py-6 flex flex-col justify-between">
             <div>
@@ -51,9 +52,9 @@ const Sidebar = ({ folders, selectedFolder, onSelectFolder, onCompose }: Sidebar
                                         {folder.icon}
                                         <span>{folder.name}</span>
                                     </div>
-                                    {folder.id === 'inbox' && (
+                                    {counts && counts[folder.id as keyof typeof counts] > 0 && (
                                         <span className="bg-blue-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">
-                                            2022
+                                            {counts[folder.id as keyof typeof counts]}
                                         </span>
                                     )}
                                 </a>
