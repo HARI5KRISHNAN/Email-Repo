@@ -87,6 +87,7 @@ router.get('/mail/important', authenticateToken, async (req, res) => {
 // get folder counts for sidebar
 router.get('/mail/counts', authenticateToken, async (req, res) => {
   const user = getUsername(req);
+  console.log(`📊 Fetching counts for user: ${user}`);
   try {
     const mailDomain = process.env.MAIL_DOMAIN || 'pilot180.local';
     const userEmail = user.includes('@') ? user : `${user}@${mailDomain}`;
@@ -100,14 +101,16 @@ router.get('/mail/counts', authenticateToken, async (req, res) => {
       WHERE owner = $1 OR $2 = ANY(to_addresses)
     `, [user, userEmail]);
 
-    res.json({
+    const result = {
       ok: true,
       counts: {
         inbox: parseInt(counts.rows[0].inbox_unread),
         sent: parseInt(counts.rows[0].sent_unread),
         important: parseInt(counts.rows[0].important_unread)
       }
-    });
+    };
+    console.log(`📊 Returning counts:`, result.counts);
+    res.json(result);
   } catch (err) {
     console.error(err);
     res.status(500).json({ ok: false, error: err.message });
