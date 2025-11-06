@@ -19,6 +19,8 @@ export interface BackendEmail {
   owner?: string;
   created_at?: string;
   received_at?: string;
+  is_read?: boolean;
+  is_starred?: boolean;
 }
 
 export interface EmailListResponse {

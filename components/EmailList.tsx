@@ -12,9 +12,10 @@ interface ThreadListItemProps {
     isPinned: boolean;
     onTogglePin: (threadId: string) => void;
     onStarToggle: (emailId: string, isStarred: boolean) => void;
+    onMarkAsUnread: (emailId: string) => void;
 }
 
-const ThreadListItem: React.FC<ThreadListItemProps> = ({ thread, isSelected, onSelect, isPinned, onTogglePin, onStarToggle }) => {
+const ThreadListItem: React.FC<ThreadListItemProps> = ({ thread, isSelected, onSelect, isPinned, onTogglePin, onStarToggle, onMarkAsUnread }) => {
     const latestMessage = thread[0];
     const threadCount = thread.length;
     const isThreadUnread = thread.some(e => !e.isRead);
@@ -79,7 +80,7 @@ const ThreadListItem: React.FC<ThreadListItemProps> = ({ thread, isSelected, onS
                                     <PinIcon className="w-5 h-5" isFilled={isPinned} />
                                 </button>
                                 <button
-                                    onClick={(e) => { e.stopPropagation(); console.log('Mark as unread clicked'); }}
+                                    onClick={(e) => { e.stopPropagation(); onMarkAsUnread(latestMessage.id); }}
                                     title="Mark as unread"
                                     className="p-1 rounded-full hover:bg-slate-200 hover:text-slate-800"
                                     aria-label="Mark as unread"
@@ -112,9 +113,10 @@ interface EmailListProps {
     pinnedThreadIds: string[];
     onTogglePin: (threadId: string) => void;
     onStarToggle: (emailId: string, isStarred: boolean) => void;
+    onMarkAsUnread: (emailId: string) => void;
 }
 
-const EmailList = ({ threads, selectedThreadId, onSelectThread, searchQuery, onSearchChange, sortOrder, onSortChange, pinnedThreadIds, onTogglePin, onStarToggle }: EmailListProps) => {
+const EmailList = ({ threads, selectedThreadId, onSelectThread, searchQuery, onSearchChange, sortOrder, onSortChange, pinnedThreadIds, onTogglePin, onStarToggle, onMarkAsUnread }: EmailListProps) => {
     const unreadCount = threads.reduce((count, thread) => {
         return count + (thread.some(e => !e.isRead) ? 1 : 0);
     }, 0);
@@ -162,6 +164,7 @@ const EmailList = ({ threads, selectedThreadId, onSelectThread, searchQuery, onS
                         isPinned={pinnedThreadIds.includes(thread[0].threadId)}
                         onTogglePin={onTogglePin}
                         onStarToggle={onStarToggle}
+                        onMarkAsUnread={onMarkAsUnread}
                     />
                 ))}
             </div>
