@@ -46,8 +46,8 @@ export function transformBackendEmail(backendEmail: BackendEmail, folder: Email[
     snippet: createSnippet(body),
     body: body,
     timestamp: backendEmail.received_at || backendEmail.created_at || new Date().toISOString(),
-    isRead: true, // Default to read for now
-    isStarred: false, // Not available from backend
+    isRead: backendEmail.is_read ?? false,
+    isStarred: backendEmail.is_starred ?? false,
     isImportant: backendEmail.folder === 'important',
     folder: (backendEmail.folder?.toLowerCase() || folder) as Email['folder'],
   };
