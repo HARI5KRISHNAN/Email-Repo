@@ -12,6 +12,31 @@ export default function Compose({ onClose, onSent }: ComposeProps) {
   const [body, setBody] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showDiscardDialog, setShowDiscardDialog] = useState(false);
+
+  const hasContent = () => {
+    return to.trim() !== '' || subject.trim() !== '' || body.trim() !== '';
+  };
+
+  const handleClose = () => {
+    if (hasContent()) {
+      setShowDiscardDialog(true);
+    } else {
+      if (onClose) onClose();
+    }
+  };
+
+  const handleDiscard = () => {
+    setShowDiscardDialog(false);
+    if (onClose) onClose();
+  };
+
+  const handleSaveDraft = () => {
+    // TODO: Implement draft saving functionality
+    alert('Draft saved successfully!');
+    setShowDiscardDialog(false);
+    if (onClose) onClose();
+  };
 
   const onSend = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,7 +76,7 @@ export default function Compose({ onClose, onSent }: ComposeProps) {
         <h2 className="text-xl font-semibold text-slate-800">Compose Email</h2>
         {onClose && (
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="text-slate-400 hover:text-slate-600"
             aria-label="Close"
           >
@@ -113,7 +138,7 @@ export default function Compose({ onClose, onSent }: ComposeProps) {
           {onClose && (
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-md"
               disabled={loading}
             >
@@ -129,6 +154,38 @@ export default function Compose({ onClose, onSent }: ComposeProps) {
           </button>
         </div>
       </form>
+
+      {/* Discard Dialog */}
+      {showDiscardDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-slate-800 mb-3">Save draft?</h3>
+            <p className="text-slate-600 mb-6">
+              You have unsaved changes. Do you want to save this email as a draft?
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowDiscardDialog(false)}
+                className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-md font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDiscard}
+                className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-md font-medium"
+              >
+                Discard
+              </button>
+              <button
+                onClick={handleSaveDraft}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium"
+              >
+                Save Draft
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

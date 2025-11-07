@@ -692,6 +692,7 @@ const EmailDetail = ({ thread, onMarkAsUnread, onMoveToSpam, onMoveToTrash }: Em
     const [expandedMessageId, setExpandedMessageId] = useState<string | null>(null);
     const [subject, setSubject] = useState('');
     const subjectRef = useRef<HTMLTextAreaElement>(null);
+    const [showDiscardDialog, setShowDiscardDialog] = useState(false);
 
     useEffect(() => {
         if (thread && thread.length > 0) {
@@ -831,11 +832,27 @@ const EmailDetail = ({ thread, onMarkAsUnread, onMoveToSpam, onMoveToTrash }: Em
     };
 
     const handleCancelReply = () => {
+        // Check if user has made changes (recipients added means they're composing)
+        if (replyTo.length > 0 || replyCc.length > 0) {
+            setShowDiscardDialog(true);
+        } else {
+            confirmCancelReply();
+        }
+    };
+
+    const confirmCancelReply = () => {
         setIsReplying(false);
         setReplyTo([]);
         setReplyCc([]);
         setReplySubject('');
         setInitialReplyContent('');
+        setShowDiscardDialog(false);
+    };
+
+    const handleSaveReplyDraft = () => {
+        // TODO: Implement draft saving functionality
+        alert('Reply draft saved successfully!');
+        confirmCancelReply();
     };
     
 
@@ -923,7 +940,7 @@ const EmailDetail = ({ thread, onMarkAsUnread, onMoveToSpam, onMoveToTrash }: Em
             </div>
             
             {isReplying && (
-                <ReplyBox 
+                <ReplyBox
                     email={latestMessage}
                     to={replyTo}
                     cc={replyCc}
@@ -934,6 +951,38 @@ const EmailDetail = ({ thread, onMarkAsUnread, onMoveToSpam, onMoveToTrash }: Em
                     onCancel={handleCancelReply}
                     initialContent={initialReplyContent}
                 />
+            )}
+
+            {/* Discard Dialog */}
+            {showDiscardDialog && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+                        <h3 className="text-lg font-semibold text-slate-800 mb-3">Save draft?</h3>
+                        <p className="text-slate-600 mb-6">
+                            You have an unsaved reply. Do you want to save it as a draft?
+                        </p>
+                        <div className="flex gap-3 justify-end">
+                            <button
+                                onClick={() => setShowDiscardDialog(false)}
+                                className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-md font-medium"
+                            >
+                                Continue Editing
+                            </button>
+                            <button
+                                onClick={confirmCancelReply}
+                                className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-md font-medium"
+                            >
+                                Discard
+                            </button>
+                            <button
+                                onClick={handleSaveReplyDraft}
+                                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium"
+                            >
+                                Save Draft
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );
