@@ -337,6 +337,7 @@ const Calendar: React.FC = () => {
               return (
                 <div
                   key={meeting.id}
+                  onClick={() => setSelectedMeeting(meeting)}
                   className="p-3 rounded-lg border border-slate-200 hover:bg-slate-50 transition cursor-pointer"
                 >
                   <div className={`inline-block w-2 h-2 rounded-full ${getColorForMeeting(meeting.id)} mr-2`} />
