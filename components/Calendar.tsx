@@ -9,8 +9,13 @@ interface Meeting {
   start_time: string;
   end_time: string;
   location?: string;
+  meeting_link?: string;
   organizer: string;
   attendees: string[];
+}
+
+interface CalendarProps {
+  onJoinMeeting?: (meeting: Meeting) => void;
 }
 
 const hours = [
@@ -32,7 +37,7 @@ function getWeekDays(date: Date) {
   });
 }
 
-const Calendar: React.FC = () => {
+const Calendar: React.FC<CalendarProps> = ({ onJoinMeeting }) => {
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -489,13 +494,36 @@ const Calendar: React.FC = () => {
             </div>
 
             {/* Modal Footer */}
-            <div className="sticky bottom-0 bg-slate-50 border-t border-slate-200 px-6 py-4 flex justify-end gap-3">
-              <button
-                onClick={() => setSelectedMeeting(null)}
-                className="px-6 py-2 bg-white border border-slate-300 text-slate-700 font-medium rounded-lg hover:bg-slate-100 transition"
-              >
-                Close
-              </button>
+            <div className="sticky bottom-0 bg-slate-50 border-t border-slate-200 px-6 py-4 flex justify-between items-center gap-3">
+              <div>
+                {selectedMeeting.meeting_link && (
+                  <p className="text-sm text-slate-500">
+                    Click "Join Meeting" to start video call
+                  </p>
+                )}
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setSelectedMeeting(null)}
+                  className="px-6 py-2 bg-white border border-slate-300 text-slate-700 font-medium rounded-lg hover:bg-slate-100 transition"
+                >
+                  Close
+                </button>
+                {selectedMeeting.meeting_link && onJoinMeeting && (
+                  <button
+                    onClick={() => {
+                      onJoinMeeting(selectedMeeting);
+                      setSelectedMeeting(null);
+                    }}
+                    className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition flex items-center gap-2"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    Join Meeting
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>

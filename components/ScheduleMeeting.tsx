@@ -7,7 +7,11 @@ interface Attendee {
   id: string;
 }
 
-const ScheduleMeeting: React.FC = () => {
+interface ScheduleMeetingProps {
+  onJoinMeeting?: (meetingData: { roomName: string; displayName: string }) => void;
+}
+
+const ScheduleMeeting: React.FC<ScheduleMeetingProps> = ({ onJoinMeeting }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [startDate, setStartDate] = useState('');
@@ -62,6 +66,44 @@ const ScheduleMeeting: React.FC = () => {
     if (!title.trim()) {
       setTitle('Instant Meeting');
     }
+  };
+
+  const startAndJoinInstantMeeting = () => {
+    // Generate meeting ID
+    const meetingId = Math.random().toString(36).substring(2, 15);
+    const link = `https://meet.jit.si/${meetingId}`;
+
+    // Create meeting data
+    const meetingData = {
+      roomName: meetingId,
+      displayName: 'User' // You can get this from keycloak or user context
+    };
+
+    // Launch video call immediately (no backend dependency)
+    if (onJoinMeeting) {
+      onJoinMeeting(meetingData);
+    }
+
+    // Optionally save meeting to backend (don't block if it fails)
+    // This happens in background, won't affect video call
+    const now = new Date();
+    const endTime = new Date(now.getTime() + 60 * 60 * 1000);
+
+    // Use setTimeout to ensure video call launches first
+    setTimeout(() => {
+      api.post('/meetings', {
+        title: 'Instant Meeting',
+        description: 'Quick video conference',
+        start_time: now.toISOString(),
+        end_time: endTime.toISOString(),
+        location: 'Online Meeting',
+        meeting_link: link,
+        attendees: []
+      }).catch(err => {
+        // Silently fail - video call already launched
+        console.log('Note: Meeting not saved to calendar (optional feature)');
+      });
+    }, 100);
   };
 
   const addAttendee = () => {
@@ -190,18 +232,31 @@ const ScheduleMeeting: React.FC = () => {
           <p className="text-slate-500">Create and schedule a new meeting with attendees</p>
         </div>
 
-        {/* Start Instant Meeting Button */}
-        <div className="mb-6 flex justify-end">
+        {/* Start Instant Meeting Buttons */}
+        <div className="mb-6 flex justify-end gap-3">
           <button
             type="button"
             onClick={startInstantMeeting}
-            className="px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white font-medium rounded-lg hover:from-green-700 hover:to-green-800 transition-all shadow-md hover:shadow-lg flex items-center gap-2"
+            className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-medium rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all shadow-md hover:shadow-lg flex items-center gap-2"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
-            <span>Start Instant Meeting</span>
+            <span>Prepare Instant Meeting</span>
           </button>
+
+          {onJoinMeeting && (
+            <button
+              type="button"
+              onClick={startAndJoinInstantMeeting}
+              className="px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white font-medium rounded-lg hover:from-green-700 hover:to-green-800 transition-all shadow-md hover:shadow-lg flex items-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+              <span>Start & Join Now</span>
+            </button>
+          )}
         </div>
 
         {/* Success/Error Messages */}
