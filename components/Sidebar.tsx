@@ -7,7 +7,7 @@ interface SidebarProps {
     selectedFolder: string;
     onSelectFolder: (folderId: Folder['id']) => void;
     onCompose?: () => void;
-    counts?: { inbox: number; sent: number; important: number; spam: number; trash: number };
+    counts?: { inbox: number; sent: number; important: number; spam: number; trash: number; draft: number };
     onEmailDrop?: (emailId: string, targetFolder: string) => void;
 }
 

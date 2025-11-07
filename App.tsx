@@ -24,7 +24,7 @@ function App({ keycloak }: KeycloakProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCompose, setShowCompose] = useState(false);
-  const [folderCounts, setFolderCounts] = useState<{ inbox: number; sent: number; important: number; spam: number; trash: number }>({ inbox: 0, sent: 0, important: 0, spam: 0, trash: 0 });
+  const [folderCounts, setFolderCounts] = useState<{ inbox: number; sent: number; important: number; spam: number; trash: number; draft: number }>({ inbox: 0, sent: 0, important: 0, spam: 0, trash: 0, draft: 0 });
 
   // Load pinned threads from localStorage
   useEffect(() => {
@@ -58,6 +58,34 @@ function App({ keycloak }: KeycloakProps) {
       try {
         setLoading(true);
         setError(null);
+
+        // Handle drafts separately
+        if (selectedFolder === 'draft') {
+          const response = await api.get('/mail/drafts');
+          if (response.data.ok) {
+            // Transform drafts to email format for display
+            const draftEmails: Email[] = response.data.drafts.map((draft: any) => ({
+              id: `draft-${draft.id}`,
+              threadId: `draft-thread-${draft.id}`,
+              sender: 'Draft',
+              senderShort: 'D',
+              senderEmail: draft.user_email,
+              to: draft.to_recipients.map((email: string) => ({ name: email, email })),
+              cc: draft.cc_recipients?.map((email: string) => ({ name: email, email })) || [],
+              subject: draft.subject || '(No subject)',
+              snippet: draft.body.replace(/<[^>]*>/g, '').substring(0, 100) || '(No content)',
+              body: draft.body || '',
+              timestamp: draft.updated_at,
+              isStarred: false,
+              isRead: true,
+              folder: 'draft',
+              draftData: draft // Store original draft data
+            }));
+            setEmails(draftEmails);
+          }
+          await fetchCounts();
+          return;
+        }
 
         let endpoint = '/mail/inbox';
         if (selectedFolder === 'sent') {

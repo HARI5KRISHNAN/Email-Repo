@@ -31,11 +31,25 @@ export default function Compose({ onClose, onSent }: ComposeProps) {
     if (onClose) onClose();
   };
 
-  const handleSaveDraft = () => {
-    // TODO: Implement draft saving functionality
-    alert('Draft saved successfully!');
-    setShowDiscardDialog(false);
-    if (onClose) onClose();
+  const handleSaveDraft = async () => {
+    try {
+      const toArray = to.split(',').map(s => s.trim()).filter(Boolean);
+
+      await api.post('/mail/drafts', {
+        to: toArray,
+        cc: [],
+        subject,
+        body,
+        draftType: 'compose'
+      });
+
+      setShowDiscardDialog(false);
+      if (onSent) onSent(); // Trigger refresh
+      if (onClose) onClose();
+    } catch (err: any) {
+      console.error('Failed to save draft:', err);
+      alert('Failed to save draft: ' + (err.response?.data?.error || err.message));
+    }
   };
 
   const onSend = async (e: React.FormEvent) => {
