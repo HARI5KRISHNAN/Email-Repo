@@ -87,6 +87,11 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomName, displayName, onClose })
             // Ensure guest access
             enableInsecureRoomNameWarning: false,
             enableLobby: false,
+            // Disable analytics to prevent console spam
+            analytics: {
+              disabled: true,
+            },
+            disableThirdPartyRequests: true,
           },
           interfaceConfigOverwrite: {
             TOOLBAR_BUTTONS: [
