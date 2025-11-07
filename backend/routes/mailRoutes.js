@@ -135,6 +135,133 @@ router.get('/mail/calendar/meetings', authenticateToken, async (req, res) => {
   }
 });
 
+// create a new meeting
+router.post('/mail/calendar/meetings', authenticateToken, async (req, res) => {
+  const user = getUsername(req);
+  try {
+    const { title, description, start_time, end_time, location, meeting_link, attendees, send_invitations } = req.body;
+
+    // Validation
+    if (!title || !start_time || !end_time || !attendees || attendees.length === 0) {
+      return res.status(400).json({
+        ok: false,
+        error: 'Missing required fields: title, start_time, end_time, and attendees are required'
+      });
+    }
+
+    // Construct organizer email
+    const mailDomain = process.env.MAIL_DOMAIN || 'pilot180.local';
+    const organizerEmail = user.includes('@') ? user : `${user}@${mailDomain}`;
+
+    // Validate attendees are email addresses
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    for (const email of attendees) {
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({
+          ok: false,
+          error: `Invalid email address: ${email}`
+        });
+      }
+    }
+
+    // Validate start time is before end time
+    const startDate = new Date(start_time);
+    const endDate = new Date(end_time);
+    if (endDate <= startDate) {
+      return res.status(400).json({
+        ok: false,
+        error: 'End time must be after start time'
+      });
+    }
+
+    // Insert meeting into database
+    const insertQ = await db.query(
+      `INSERT INTO meetings (title, description, start_time, end_time, location, organizer, attendees)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING *`,
+      [
+        title,
+        description || '',
+        start_time,
+        end_time,
+        location || 'Not specified',
+        organizerEmail,
+        attendees
+      ]
+    );
+
+    const meeting = insertQ.rows[0];
+
+    // Send email invitations if requested
+    if (send_invitations) {
+      try {
+        const { sendMail } = await import('../services/mailService.js');
+
+        const meetingDetails = `
+Meeting: ${title}
+${description ? `\nDescription: ${description}` : ''}
+
+Start Time: ${new Date(start_time).toLocaleString()}
+End Time: ${new Date(end_time).toLocaleString()}
+Location: ${location || 'Not specified'}
+${meeting_link ? `\nMeeting Link: ${meeting_link}` : ''}
+
+Organizer: ${organizerEmail}
+Attendees: ${attendees.join(', ')}
+
+---
+This is an automated meeting invitation from Pilot180 Email System.
+        `.trim();
+
+        // Send invitation to each attendee
+        for (const attendeeEmail of attendees) {
+          try {
+            await sendMail({
+              from: organizerEmail,
+              to: [attendeeEmail],
+              subject: `Meeting Invitation: ${title}`,
+              text: meetingDetails,
+              html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                  <h2 style="color: #2563eb;">${title}</h2>
+                  ${description ? `<p style="color: #64748b;">${description}</p>` : ''}
+
+                  <div style="background: #f1f5f9; padding: 16px; border-radius: 8px; margin: 20px 0;">
+                    <p style="margin: 8px 0;"><strong>Start:</strong> ${new Date(start_time).toLocaleString()}</p>
+                    <p style="margin: 8px 0;"><strong>End:</strong> ${new Date(end_time).toLocaleString()}</p>
+                    <p style="margin: 8px 0;"><strong>Location:</strong> ${location || 'Not specified'}</p>
+                    ${meeting_link ? `<p style="margin: 8px 0;"><strong>Join Link:</strong> <a href="${meeting_link}" style="color: #2563eb;">${meeting_link}</a></p>` : ''}
+                  </div>
+
+                  <p><strong>Organizer:</strong> ${organizerEmail}</p>
+                  <p><strong>Attendees:</strong> ${attendees.join(', ')}</p>
+
+                  <hr style="margin: 20px 0; border: none; border-top: 1px solid #e2e8f0;">
+                  <p style="color: #94a3b8; font-size: 12px;">This is an automated meeting invitation from Pilot180 Email System.</p>
+                </div>
+              `,
+              owner: user
+            });
+            console.log(`✉️ Sent meeting invitation to ${attendeeEmail}`);
+          } catch (emailErr) {
+            console.error(`Failed to send invitation to ${attendeeEmail}:`, emailErr.message);
+            // Continue with other attendees even if one fails
+          }
+        }
+      } catch (err) {
+        console.error('Failed to send invitations:', err.message);
+        // Don't fail the request, just log the error
+      }
+    }
+
+    console.log(`✅ Meeting created: ${title} by ${organizerEmail}`);
+    res.json({ ok: true, meeting });
+  } catch (err) {
+    console.error('Create meeting error:', err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 // get starred/important emails for logged-in user
 router.get('/mail/important', authenticateToken, async (req, res) => {
   const user = getUsername(req);

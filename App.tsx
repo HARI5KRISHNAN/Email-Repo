@@ -6,6 +6,7 @@ import EmailList from './components/EmailList';
 import EmailDetail from './components/EmailDetail';
 import Compose from './components/Compose';
 import Calendar from './components/Calendar';
+import ScheduleMeeting from './components/ScheduleMeeting';
 import { folders } from './constants';
 import { Email, Folder, KeycloakProps, EmailListResponse } from './types';
 import api from './api';
@@ -47,8 +48,8 @@ function App({ keycloak }: KeycloakProps) {
 
   // Fetch emails from backend
   useEffect(() => {
-    // Skip email fetching for calendar view
-    if (selectedFolder === 'calendar') {
+    // Skip email fetching for calendar and schedule views
+    if (selectedFolder === 'calendar' || selectedFolder === 'schedule') {
       setLoading(false);
       return;
     }
@@ -85,8 +86,8 @@ function App({ keycloak }: KeycloakProps) {
   }, [selectedFolder]);
 
   const handleEmailSent = () => {
-    // Skip refresh for calendar view
-    if (selectedFolder === 'calendar') {
+    // Skip refresh for calendar and schedule views
+    if (selectedFolder === 'calendar' || selectedFolder === 'schedule') {
       return;
     }
 
@@ -328,6 +329,10 @@ function App({ keycloak }: KeycloakProps) {
           {selectedFolder === 'calendar' ? (
             <div className="flex-1 bg-white">
               <Calendar />
+            </div>
+          ) : selectedFolder === 'schedule' ? (
+            <div className="flex-1 bg-white">
+              <ScheduleMeeting />
             </div>
           ) : (
             <>
