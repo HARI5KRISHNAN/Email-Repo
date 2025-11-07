@@ -152,8 +152,8 @@ const Calendar: React.FC = () => {
         </div>
 
         {/* Calendar Grid - Single scroll on left */}
-        <div className="flex-1 flex overflow-y-auto">
-          <div className="flex flex-1 min-w-full">
+        <div className="flex-1 overflow-y-auto">
+          <div className="flex min-w-full">
             {/* Time column */}
             <div className="w-24 border-r border-slate-200 bg-white flex-shrink-0">
               {hours.map((hour, idx) => (
