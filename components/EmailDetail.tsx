@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import { Email, ToolbarItem, Recipient } from '../types';
-import { ALL_TOOLBAR_ITEMS, DEFAULT_TOOLBAR_ITEM_IDS, DotsVerticalIcon, ReplyIcon, UnreadIcon, StarIcon, PaperclipIcon, ChevronDownIcon, CogIcon, SignatureIcon, ReplyAllIcon, SparklesIcon, ArchiveIcon, TrashIcon } from '../constants';
+import { ALL_TOOLBAR_ITEMS, DEFAULT_TOOLBAR_ITEM_IDS, DotsVerticalIcon, ReplyIcon, UnreadIcon, StarIcon, PaperclipIcon, ChevronDownIcon, CogIcon, SignatureIcon, ReplyAllIcon, SparklesIcon, SpamIcon, TrashIcon } from '../constants';
 import api from '../api';
 
 const isValidEmail = (email: string): boolean => {
@@ -875,7 +875,7 @@ const EmailDetail = ({ thread, onMarkAsUnread, onMoveToSpam, onMoveToTrash }: Em
                             title="Mark as spam"
                             aria-label="Mark as spam"
                         >
-                            <ArchiveIcon className="w-5 h-5" />
+                            <SpamIcon className="w-5 h-5" />
                         </button>
                         <button
                             onClick={() => onMoveToTrash && onMoveToTrash(latestMessage.id)}
