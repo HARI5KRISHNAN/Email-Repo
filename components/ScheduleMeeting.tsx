@@ -11,9 +11,11 @@ const ScheduleMeeting: React.FC = () => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [startDate, setStartDate] = useState('');
-  const [startTime, setStartTime] = useState('');
+  const [startHour, setStartHour] = useState('09');
+  const [startMinute, setStartMinute] = useState('00');
   const [endDate, setEndDate] = useState('');
-  const [endTime, setEndTime] = useState('');
+  const [endHour, setEndHour] = useState('10');
+  const [endMinute, setEndMinute] = useState('00');
   const [location, setLocation] = useState('');
   const [meetingLink, setMeetingLink] = useState('');
   const [attendees, setAttendees] = useState<Attendee[]>([]);
@@ -23,11 +25,43 @@ const ScheduleMeeting: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
+  // Generate hours (00-23) and minutes (00, 05, 10, ..., 55)
+  const hours = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0'));
+  const minutes = Array.from({ length: 12 }, (_, i) => (i * 5).toString().padStart(2, '0'));
+
   const generateMeetingLink = () => {
     const meetingId = Math.random().toString(36).substring(2, 15);
     const link = `https://meet.pilot180.local/${meetingId}`;
     setMeetingLink(link);
     setLocation('Online Meeting');
+  };
+
+  const startInstantMeeting = () => {
+    // Set to current time
+    const now = new Date();
+    const endTime = new Date(now.getTime() + 60 * 60 * 1000); // 1 hour later
+
+    // Format dates
+    const dateStr = now.toISOString().split('T')[0];
+    const startH = now.getHours().toString().padStart(2, '0');
+    const startM = Math.floor(now.getMinutes() / 5) * 5; // Round to nearest 5 minutes
+    const endH = endTime.getHours().toString().padStart(2, '0');
+    const endM = Math.floor(endTime.getMinutes() / 5) * 5;
+
+    setStartDate(dateStr);
+    setStartHour(startH);
+    setStartMinute(startM.toString().padStart(2, '0'));
+    setEndDate(dateStr);
+    setEndHour(endH);
+    setEndMinute(endM.toString().padStart(2, '0'));
+
+    // Generate meeting link automatically
+    generateMeetingLink();
+
+    // Set default title if empty
+    if (!title.trim()) {
+      setTitle('Instant Meeting');
+    }
   };
 
   const addAttendee = () => {
@@ -67,17 +101,19 @@ const ScheduleMeeting: React.FC = () => {
       return;
     }
 
-    if (!startDate || !startTime) {
+    if (!startDate) {
       setErrorMessage('Start date and time are required');
       return;
     }
 
-    if (!endDate || !endTime) {
+    if (!endDate) {
       setErrorMessage('End date and time are required');
       return;
     }
 
     // Combine date and time
+    const startTime = `${startHour}:${startMinute}`;
+    const endTime = `${endHour}:${endMinute}`;
     const startDateTime = new Date(`${startDate}T${startTime}`);
     const endDateTime = new Date(`${endDate}T${endTime}`);
 
@@ -116,9 +152,11 @@ const ScheduleMeeting: React.FC = () => {
           setTitle('');
           setDescription('');
           setStartDate('');
-          setStartTime('');
+          setStartHour('09');
+          setStartMinute('00');
           setEndDate('');
-          setEndTime('');
+          setEndHour('10');
+          setEndMinute('00');
           setLocation('');
           setMeetingLink('');
           setAttendees([]);
@@ -144,12 +182,27 @@ const ScheduleMeeting: React.FC = () => {
     <div className="h-full bg-white overflow-auto">
       <div className="max-w-4xl mx-auto p-6">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-6">
           <div className="flex items-center gap-3 mb-2">
             <ScheduleIcon className="w-8 h-8 text-blue-600" />
             <h1 className="text-3xl font-bold text-slate-800">Schedule Meeting</h1>
           </div>
           <p className="text-slate-500">Create and schedule a new meeting with attendees</p>
+        </div>
+
+        {/* Start Instant Meeting Button */}
+        <div className="mb-6">
+          <button
+            type="button"
+            onClick={startInstantMeeting}
+            className="w-full px-6 py-4 bg-gradient-to-r from-green-600 to-green-700 text-white font-semibold rounded-lg hover:from-green-700 hover:to-green-800 transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-3"
+          >
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+            <span>Start Instant Meeting</span>
+            <span className="text-sm opacity-90">(Starts now, 1 hour duration)</span>
+          </button>
         </div>
 
         {/* Success/Error Messages */}
@@ -209,13 +262,26 @@ const ScheduleMeeting: React.FC = () => {
                   onChange={(e) => setStartDate(e.target.value)}
                   className="flex-1 px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
-                <input
-                  type="time"
-                  value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
-                  step="300"
-                  className="w-32 px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
+                <select
+                  value={startHour}
+                  onChange={(e) => setStartHour(e.target.value)}
+                  className="px-3 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                >
+                  {hours.map(hour => (
+                    <option key={hour} value={hour}>
+                      {parseInt(hour) === 0 ? '12 AM' : parseInt(hour) < 12 ? `${parseInt(hour)} AM` : parseInt(hour) === 12 ? '12 PM' : `${parseInt(hour) - 12} PM`}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={startMinute}
+                  onChange={(e) => setStartMinute(e.target.value)}
+                  className="px-3 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                >
+                  {minutes.map(min => (
+                    <option key={min} value={min}>{min}</option>
+                  ))}
+                </select>
               </div>
             </div>
 
@@ -231,13 +297,26 @@ const ScheduleMeeting: React.FC = () => {
                   onChange={(e) => setEndDate(e.target.value)}
                   className="flex-1 px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
-                <input
-                  type="time"
-                  value={endTime}
-                  onChange={(e) => setEndTime(e.target.value)}
-                  step="300"
-                  className="w-32 px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
+                <select
+                  value={endHour}
+                  onChange={(e) => setEndHour(e.target.value)}
+                  className="px-3 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                >
+                  {hours.map(hour => (
+                    <option key={hour} value={hour}>
+                      {parseInt(hour) === 0 ? '12 AM' : parseInt(hour) < 12 ? `${parseInt(hour)} AM` : parseInt(hour) === 12 ? '12 PM' : `${parseInt(hour) - 12} PM`}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={endMinute}
+                  onChange={(e) => setEndMinute(e.target.value)}
+                  className="px-3 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                >
+                  {minutes.map(min => (
+                    <option key={min} value={min}>{min}</option>
+                  ))}
+                </select>
               </div>
             </div>
           </div>
@@ -371,9 +450,11 @@ const ScheduleMeeting: React.FC = () => {
                 setTitle('');
                 setDescription('');
                 setStartDate('');
-                setStartTime('');
+                setStartHour('09');
+                setStartMinute('00');
                 setEndDate('');
-                setEndTime('');
+                setEndHour('10');
+                setEndMinute('00');
                 setLocation('');
                 setMeetingLink('');
                 setAttendees([]);
