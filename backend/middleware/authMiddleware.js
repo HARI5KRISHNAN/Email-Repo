@@ -19,13 +19,16 @@ function getKey(header, callback) {
 }
 
 export function authenticateToken(req, res, next) {
+  console.log(`🔐 Auth middleware called for ${req.method} ${req.url}`);
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
   if (!token) {
+    console.log(`🔐 No token found in request`);
     return res.status(401).json({ ok: false, error: 'No token provided' });
   }
 
+  console.log(`🔐 Token found, verifying...`);
   // Use KEYCLOAK_ISSUER if set, otherwise fall back to KEYCLOAK_URL
   const issuerUrl = process.env.KEYCLOAK_ISSUER || process.env.KEYCLOAK_URL;
 
@@ -36,10 +39,11 @@ export function authenticateToken(req, res, next) {
     algorithms: ['RS256']
   }, (err, decoded) => {
     if (err) {
-      console.error('Token verification failed:', err.message);
+      console.error('🔐 Token verification failed:', err.message);
       return res.status(403).json({ ok: false, error: 'Invalid or expired token' });
     }
 
+    console.log(`🔐 Token verified for user: ${decoded.preferred_username || decoded.email}`);
     // Attach decoded token to request
     req.kauth = {
       grant: {

@@ -347,7 +347,128 @@ router.get('/mail/search', authenticateToken, async (req, res) => {
   }
 });
 
-// get single mail (MUST come after specific string routes like /mail/sent, /mail/inbox, /mail/counts, /mail/search)
+// ========== DRAFT ENDPOINTS (MUST come before /mail/:id) ==========
+
+// Get all drafts for logged-in user
+router.get('/mail/drafts', authenticateToken, async (req, res) => {
+  const user = getUsername(req);
+  console.log(`📝 GET /mail/drafts requested by user: ${user}`);
+  try {
+    const mailDomain = process.env.MAIL_DOMAIN || 'pilot180.local';
+    const userEmail = user.includes('@') ? user : `${user}@${mailDomain}`;
+    console.log(`📝 Fetching drafts for email: ${userEmail}`);
+
+    const q = await db.query(
+      `SELECT id, user_email, to_recipients, cc_recipients, subject, body, draft_type, in_reply_to, attachments, created_at, updated_at
+       FROM drafts
+       WHERE user_email = $1
+       ORDER BY updated_at DESC`,
+      [userEmail]
+    );
+
+    console.log(`📝 Found ${q.rows.length} drafts for ${userEmail}`);
+    res.json({ ok: true, drafts: q.rows });
+  } catch (err) {
+    console.error('Get drafts error:', err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// Get specific draft by ID
+router.get('/mail/drafts/:id', authenticateToken, async (req, res) => {
+  const user = getUsername(req);
+  const draftId = req.params.id;
+
+  try {
+    const mailDomain = process.env.MAIL_DOMAIN || 'pilot180.local';
+    const userEmail = user.includes('@') ? user : `${user}@${mailDomain}`;
+
+    const q = await db.query(
+      `SELECT id, user_email, to_recipients, cc_recipients, subject, body, draft_type, in_reply_to, attachments, created_at, updated_at
+       FROM drafts
+       WHERE id = $1 AND user_email = $2`,
+      [draftId, userEmail]
+    );
+
+    if (q.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: 'Draft not found' });
+    }
+
+    res.json({ ok: true, draft: q.rows[0] });
+  } catch (err) {
+    console.error('Get draft error:', err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// Save/update draft
+router.post('/mail/drafts', authenticateToken, async (req, res) => {
+  const user = getUsername(req);
+  const { id, to, cc, subject, body, draftType, inReplyTo, attachments } = req.body;
+
+  try {
+    const mailDomain = process.env.MAIL_DOMAIN || 'pilot180.local';
+    const userEmail = user.includes('@') ? user : `${user}@${mailDomain}`;
+
+    // If ID is provided, update existing draft
+    if (id) {
+      const updateQ = await db.query(
+        `UPDATE drafts
+         SET to_recipients = $1, cc_recipients = $2, subject = $3, body = $4,
+             draft_type = $5, in_reply_to = $6, attachments = $7, updated_at = NOW()
+         WHERE id = $8 AND user_email = $9
+         RETURNING *`,
+        [to || [], cc || [], subject || '', body || '', draftType || 'compose', inReplyTo || null, attachments || [], id, userEmail]
+      );
+
+      if (updateQ.rows.length === 0) {
+        return res.status(404).json({ ok: false, error: 'Draft not found or access denied' });
+      }
+
+      return res.json({ ok: true, draft: updateQ.rows[0] });
+    }
+
+    // Create new draft
+    const insertQ = await db.query(
+      `INSERT INTO drafts (user_email, to_recipients, cc_recipients, subject, body, draft_type, in_reply_to, attachments)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       RETURNING *`,
+      [userEmail, to || [], cc || [], subject || '', body || '', draftType || 'compose', inReplyTo || null, attachments || []]
+    );
+
+    res.json({ ok: true, draft: insertQ.rows[0] });
+  } catch (err) {
+    console.error('Save draft error:', err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// Delete draft
+router.delete('/mail/drafts/:id', authenticateToken, async (req, res) => {
+  const user = getUsername(req);
+  const draftId = req.params.id;
+
+  try {
+    const mailDomain = process.env.MAIL_DOMAIN || 'pilot180.local';
+    const userEmail = user.includes('@') ? user : `${user}@${mailDomain}`;
+
+    const deleteQ = await db.query(
+      'DELETE FROM drafts WHERE id = $1 AND user_email = $2 RETURNING id',
+      [draftId, userEmail]
+    );
+
+    if (deleteQ.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: 'Draft not found or access denied' });
+    }
+
+    res.json({ ok: true, message: 'Draft deleted successfully' });
+  } catch (err) {
+    console.error('Delete draft error:', err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// get single mail (MUST come after specific string routes like /mail/sent, /mail/inbox, /mail/counts, /mail/search, /mail/drafts)
 router.get('/mail/:id', authenticateToken, async (req, res) => {
   const user = getUsername(req);
   const id = req.params.id;
@@ -672,124 +793,6 @@ router.delete('/mail/:id/permanent', authenticateToken, async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     console.error('Permanent delete error:', err);
-    res.status(500).json({ ok: false, error: err.message });
-  }
-});
-
-// ========== DRAFT ENDPOINTS ==========
-
-// Get all drafts for logged-in user
-router.get('/mail/drafts', authenticateToken, async (req, res) => {
-  const user = getUsername(req);
-  try {
-    const mailDomain = process.env.MAIL_DOMAIN || 'pilot180.local';
-    const userEmail = user.includes('@') ? user : `${user}@${mailDomain}`;
-
-    const q = await db.query(
-      `SELECT id, user_email, to_recipients, cc_recipients, subject, body, draft_type, in_reply_to, attachments, created_at, updated_at
-       FROM drafts
-       WHERE user_email = $1
-       ORDER BY updated_at DESC`,
-      [userEmail]
-    );
-
-    res.json({ ok: true, drafts: q.rows });
-  } catch (err) {
-    console.error('Get drafts error:', err);
-    res.status(500).json({ ok: false, error: err.message });
-  }
-});
-
-// Get specific draft by ID
-router.get('/mail/drafts/:id', authenticateToken, async (req, res) => {
-  const user = getUsername(req);
-  const draftId = req.params.id;
-
-  try {
-    const mailDomain = process.env.MAIL_DOMAIN || 'pilot180.local';
-    const userEmail = user.includes('@') ? user : `${user}@${mailDomain}`;
-
-    const q = await db.query(
-      `SELECT id, user_email, to_recipients, cc_recipients, subject, body, draft_type, in_reply_to, attachments, created_at, updated_at
-       FROM drafts
-       WHERE id = $1 AND user_email = $2`,
-      [draftId, userEmail]
-    );
-
-    if (q.rows.length === 0) {
-      return res.status(404).json({ ok: false, error: 'Draft not found' });
-    }
-
-    res.json({ ok: true, draft: q.rows[0] });
-  } catch (err) {
-    console.error('Get draft error:', err);
-    res.status(500).json({ ok: false, error: err.message });
-  }
-});
-
-// Save/update draft
-router.post('/mail/drafts', authenticateToken, async (req, res) => {
-  const user = getUsername(req);
-  const { id, to, cc, subject, body, draftType, inReplyTo, attachments } = req.body;
-
-  try {
-    const mailDomain = process.env.MAIL_DOMAIN || 'pilot180.local';
-    const userEmail = user.includes('@') ? user : `${user}@${mailDomain}`;
-
-    // If ID is provided, update existing draft
-    if (id) {
-      const updateQ = await db.query(
-        `UPDATE drafts
-         SET to_recipients = $1, cc_recipients = $2, subject = $3, body = $4,
-             draft_type = $5, in_reply_to = $6, attachments = $7, updated_at = NOW()
-         WHERE id = $8 AND user_email = $9
-         RETURNING *`,
-        [to || [], cc || [], subject || '', body || '', draftType || 'compose', inReplyTo || null, attachments || [], id, userEmail]
-      );
-
-      if (updateQ.rows.length === 0) {
-        return res.status(404).json({ ok: false, error: 'Draft not found or access denied' });
-      }
-
-      return res.json({ ok: true, draft: updateQ.rows[0] });
-    }
-
-    // Create new draft
-    const insertQ = await db.query(
-      `INSERT INTO drafts (user_email, to_recipients, cc_recipients, subject, body, draft_type, in_reply_to, attachments)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-       RETURNING *`,
-      [userEmail, to || [], cc || [], subject || '', body || '', draftType || 'compose', inReplyTo || null, attachments || []]
-    );
-
-    res.json({ ok: true, draft: insertQ.rows[0] });
-  } catch (err) {
-    console.error('Save draft error:', err);
-    res.status(500).json({ ok: false, error: err.message });
-  }
-});
-
-// Delete draft
-router.delete('/mail/drafts/:id', authenticateToken, async (req, res) => {
-  const user = getUsername(req);
-  const draftId = req.params.id;
-
-  try {
-    const mailDomain = process.env.MAIL_DOMAIN || 'pilot180.local';
-    const userEmail = user.includes('@') ? user : `${user}@${mailDomain}`;
-
-    const deleteQ = await db.query(
-      'DELETE FROM drafts WHERE id = $1 AND user_email = $2 RETURNING id',
-      [draftId, userEmail]
-    );
-
-    if (deleteQ.rows.length === 0) {
-      return res.status(404).json({ ok: false, error: 'Draft not found or access denied' });
-    }
-
-    res.json({ ok: true, message: 'Draft deleted successfully' });
-  } catch (err) {
-    console.error('Delete draft error:', err);
     res.status(500).json({ ok: false, error: err.message });
   }
 });
