@@ -62,8 +62,10 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomName, displayName, onClose })
           height: '100%',
           parentNode: jitsiContainerRef.current,
           userInfo: {
-            displayName: displayName
+            displayName: displayName || 'Guest'
           },
+          // No JWT - public access
+          jwt: undefined,
           configOverwrite: {
             startWithAudioMuted: false,
             startWithVideoMuted: false,
@@ -71,6 +73,20 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomName, displayName, onClose })
             prejoinPageEnabled: false,
             enableWelcomePage: false,
             enableClosePage: false,
+            requireDisplayName: false,
+            enableUserRolesBasedOnToken: false,
+            startAudioOnly: false,
+            enableLobbyChat: false,
+            disableInviteFunctions: false,
+            doNotStoreRoom: true,
+            // Disable any authentication requirements
+            enableFeaturesBasedOnToken: false,
+            disableProfile: false,
+            hideConferenceSubject: false,
+            subject: roomName,
+            // Ensure guest access
+            enableInsecureRoomNameWarning: false,
+            enableLobby: false,
           },
           interfaceConfigOverwrite: {
             TOOLBAR_BUTTONS: [
@@ -83,6 +99,8 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomName, displayName, onClose })
             SHOW_WATERMARK_FOR_GUESTS: false,
             DEFAULT_BACKGROUND: '#474747',
             MOBILE_APP_PROMO: false,
+            DISABLE_JOIN_LEAVE_NOTIFICATIONS: false,
+            HIDE_INVITE_MORE_HEADER: false,
           }
         };
 
