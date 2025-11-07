@@ -191,17 +191,16 @@ const ScheduleMeeting: React.FC = () => {
         </div>
 
         {/* Start Instant Meeting Button */}
-        <div className="mb-6">
+        <div className="mb-6 flex justify-end">
           <button
             type="button"
             onClick={startInstantMeeting}
-            className="w-full px-6 py-4 bg-gradient-to-r from-green-600 to-green-700 text-white font-semibold rounded-lg hover:from-green-700 hover:to-green-800 transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-3"
+            className="px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white font-medium rounded-lg hover:from-green-700 hover:to-green-800 transition-all shadow-md hover:shadow-lg flex items-center gap-2"
           >
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
             </svg>
             <span>Start Instant Meeting</span>
-            <span className="text-sm opacity-90">(Starts now, 1 hour duration)</span>
           </button>
         </div>
 
@@ -265,7 +264,9 @@ const ScheduleMeeting: React.FC = () => {
                 <select
                   value={startHour}
                   onChange={(e) => setStartHour(e.target.value)}
-                  className="px-3 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                  size={1}
+                  className="px-3 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white h-[50px]"
+                  style={{ maxHeight: '200px' }}
                 >
                   {hours.map(hour => (
                     <option key={hour} value={hour}>
@@ -300,7 +301,9 @@ const ScheduleMeeting: React.FC = () => {
                 <select
                   value={endHour}
                   onChange={(e) => setEndHour(e.target.value)}
-                  className="px-3 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                  size={1}
+                  className="px-3 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white h-[50px]"
+                  style={{ maxHeight: '200px' }}
                 >
                   {hours.map(hour => (
                     <option key={hour} value={hour}>
