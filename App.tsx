@@ -5,6 +5,7 @@ import Sidebar from './components/Sidebar';
 import EmailList from './components/EmailList';
 import EmailDetail from './components/EmailDetail';
 import Compose from './components/Compose';
+import Calendar from './components/Calendar';
 import { folders } from './constants';
 import { Email, Folder, KeycloakProps, EmailListResponse } from './types';
 import api from './api';
@@ -46,6 +47,12 @@ function App({ keycloak }: KeycloakProps) {
 
   // Fetch emails from backend
   useEffect(() => {
+    // Skip email fetching for calendar view
+    if (selectedFolder === 'calendar') {
+      setLoading(false);
+      return;
+    }
+
     const fetchEmails = async () => {
       try {
         setLoading(true);
@@ -60,8 +67,6 @@ function App({ keycloak }: KeycloakProps) {
           endpoint = '/mail/spam';
         } else if (selectedFolder === 'trash') {
           endpoint = '/mail/trash';
-        } else if (selectedFolder === 'calendar') {
-          endpoint = '/mail/calendar';
         }
 
         const response = await api.get<EmailListResponse>(endpoint);
@@ -80,6 +85,11 @@ function App({ keycloak }: KeycloakProps) {
   }, [selectedFolder]);
 
   const handleEmailSent = () => {
+    // Skip refresh for calendar view
+    if (selectedFolder === 'calendar') {
+      return;
+    }
+
     // Refresh emails after sending
     setLoading(true);
     const fetchEmails = async () => {
@@ -93,8 +103,6 @@ function App({ keycloak }: KeycloakProps) {
           endpoint = '/mail/spam';
         } else if (selectedFolder === 'trash') {
           endpoint = '/mail/trash';
-        } else if (selectedFolder === 'calendar') {
-          endpoint = '/mail/calendar';
         }
         const response = await api.get<EmailListResponse>(endpoint);
         const transformedEmails = transformBackendEmails(response.data.rows, selectedFolder as any);
@@ -317,42 +325,50 @@ function App({ keycloak }: KeycloakProps) {
           onEmailDrop={handleEmailDrop}
         />
         <main className="flex flex-1 overflow-hidden border-l border-slate-200">
-          <div className="w-full md:w-[350px] lg:w-[400px] xl:w-[450px] bg-white border-r border-slate-200 flex-shrink-0">
-            {loading ? (
-              <div className="flex items-center justify-center h-full">
-                <p className="text-slate-500">Loading emails...</p>
+          {selectedFolder === 'calendar' ? (
+            <div className="flex-1 bg-white">
+              <Calendar />
+            </div>
+          ) : (
+            <>
+              <div className="w-full md:w-[350px] lg:w-[400px] xl:w-[450px] bg-white border-r border-slate-200 flex-shrink-0">
+                {loading ? (
+                  <div className="flex items-center justify-center h-full">
+                    <p className="text-slate-500">Loading emails...</p>
+                  </div>
+                ) : error ? (
+                  <div className="flex items-center justify-center h-full p-4">
+                    <div className="text-center">
+                      <p className="text-red-500 mb-2">Error loading emails</p>
+                      <p className="text-sm text-slate-500">{error}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <EmailList
+                    threads={displayThreads}
+                    selectedThreadId={selectedThreadId}
+                    onSelectThread={handleThreadSelect}
+                    searchQuery={searchQuery}
+                    onSearchChange={setSearchQuery}
+                    sortOrder={sortOrder}
+                    onSortChange={setSortOrder}
+                    pinnedThreadIds={pinnedThreadIds}
+                    onTogglePin={togglePinThread}
+                    onStarToggle={handleStarToggle}
+                    onMarkAsUnread={handleMarkAsUnread}
+                  />
+                )}
               </div>
-            ) : error ? (
-              <div className="flex items-center justify-center h-full p-4">
-                <div className="text-center">
-                  <p className="text-red-500 mb-2">Error loading emails</p>
-                  <p className="text-sm text-slate-500">{error}</p>
-                </div>
+              <div className="flex-1 bg-white hidden md:block">
+                <EmailDetail
+                  thread={selectedThread}
+                  onMarkAsUnread={handleMarkAsUnread}
+                  onMoveToSpam={handleMoveToSpam}
+                  onMoveToTrash={handleMoveToTrash}
+                />
               </div>
-            ) : (
-              <EmailList
-                threads={displayThreads}
-                selectedThreadId={selectedThreadId}
-                onSelectThread={handleThreadSelect}
-                searchQuery={searchQuery}
-                onSearchChange={setSearchQuery}
-                sortOrder={sortOrder}
-                onSortChange={setSortOrder}
-                pinnedThreadIds={pinnedThreadIds}
-                onTogglePin={togglePinThread}
-                onStarToggle={handleStarToggle}
-                onMarkAsUnread={handleMarkAsUnread}
-              />
-            )}
-          </div>
-          <div className="flex-1 bg-white hidden md:block">
-            <EmailDetail
-              thread={selectedThread}
-              onMarkAsUnread={handleMarkAsUnread}
-              onMoveToSpam={handleMoveToSpam}
-              onMoveToTrash={handleMoveToTrash}
-            />
-          </div>
+            </>
+          )}
         </main>
       </div>
 

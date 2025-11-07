@@ -102,22 +102,35 @@ router.get('/mail/trash', authenticateToken, async (req, res) => {
   }
 });
 
-// get calendar folder for logged-in user
-router.get('/mail/calendar', authenticateToken, async (req, res) => {
+// get calendar meetings for logged-in user
+router.get('/mail/calendar/meetings', authenticateToken, async (req, res) => {
   const user = getUsername(req);
   try {
     const mailDomain = process.env.MAIL_DOMAIN || 'pilot180.local';
     const userEmail = user.includes('@') ? user : `${user}@${mailDomain}`;
 
+    // Check if meetings table exists, if not return empty array
+    const tableCheck = await db.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables
+        WHERE table_name = 'meetings'
+      );
+    `);
+
+    if (!tableCheck.rows[0].exists) {
+      return res.json({ ok: true, meetings: [] });
+    }
+
+    // Fetch meetings where user is organizer or attendee
     const q = await db.query(
-      `SELECT id, message_id, from_address, to_addresses, subject, body_text, body_html, folder, owner, is_starred, is_read, created_at
-       FROM mails
-       WHERE (owner = $1 OR $2 = ANY(to_addresses)) AND folder = 'CALENDAR'
-       ORDER BY created_at DESC LIMIT 200`, [user, userEmail]
+      `SELECT id, title, description, start_time, end_time, location, organizer, attendees, created_at
+       FROM meetings
+       WHERE organizer = $1 OR $2 = ANY(attendees)
+       ORDER BY start_time ASC`, [userEmail, userEmail]
     );
-    res.json({ ok: true, rows: q.rows });
+    res.json({ ok: true, meetings: q.rows });
   } catch (err) {
-    console.error(err);
+    console.error('Calendar meetings error:', err);
     res.status(500).json({ ok: false, error: err.message });
   }
 });
