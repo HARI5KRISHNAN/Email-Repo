@@ -38,6 +38,12 @@ export const PinIcon = ({ className = 'w-6 h-6', isFilled = false }: { className
         <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
     </svg>
 );
+export const SpamIcon = ({ className = 'w-6 h-6' }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+        <circle cx="12" cy="12" r="9" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+);
 
 // Mock Data
 export const folders: Folder[] = [
@@ -45,6 +51,7 @@ export const folders: Folder[] = [
   { id: 'sent', name: 'Sent mail', icon: <SendIcon className="w-5 h-5" /> },
   { id: 'important', name: 'Important', icon: <StarIcon className="w-5 h-5" /> },
   { id: 'draft', name: 'Draft', icon: <DraftIcon className="w-5 h-5" /> },
+  { id: 'spam', name: 'Spam', icon: <SpamIcon className="w-5 h-5" /> },
   { id: 'trash', name: 'Trash', icon: <TrashIcon className="w-5 h-5" /> },
   { id: 'schedule', name: 'Schedule Meeting', icon: <ScheduleIcon className="w-5 h-5" /> },
   { id: 'calendar', name: 'Calendar', icon: <CalendarIcon className="w-5 h-5" /> },

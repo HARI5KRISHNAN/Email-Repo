@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Folder } from '../types';
 
 interface SidebarProps {
@@ -7,9 +7,35 @@ interface SidebarProps {
     selectedFolder: string;
     onSelectFolder: (folderId: Folder['id']) => void;
     onCompose?: () => void;
+    counts?: { inbox: number; sent: number; important: number; spam: number; trash: number; draft: number };
+    onEmailDrop?: (emailId: string, targetFolder: string) => void;
 }
 
-const Sidebar = ({ folders, selectedFolder, onSelectFolder, onCompose }: SidebarProps) => {
+const Sidebar = ({ folders, selectedFolder, onSelectFolder, onCompose, counts, onEmailDrop }: SidebarProps) => {
+    const [dragOverFolder, setDragOverFolder] = useState<string | null>(null);
+
+    const handleDragOver = (e: React.DragEvent, folderId: string) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setDragOverFolder(folderId);
+    };
+
+    const handleDragLeave = (e: React.DragEvent) => {
+        e.preventDefault();
+        setDragOverFolder(null);
+    };
+
+    const handleDrop = (e: React.DragEvent, folderId: string) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setDragOverFolder(null);
+
+        const emailId = e.dataTransfer.getData('emailId');
+        if (emailId && onEmailDrop) {
+            onEmailDrop(emailId, folderId.toUpperCase());
+        }
+    };
+
     return (
         <aside className="w-64 bg-white flex-shrink-0 px-4 py-6 flex flex-col justify-between">
             <div>
@@ -33,17 +59,24 @@ const Sidebar = ({ folders, selectedFolder, onSelectFolder, onCompose }: Sidebar
                     </svg>
                     Compose mail
                 </button>
-                
+
                 <nav>
                     <ul>
                         {folders.map(folder => (
-                            <li key={folder.id}>
-                                <a 
-                                    href="#" 
+                            <li
+                                key={folder.id}
+                                onDragOver={(e) => handleDragOver(e, folder.id)}
+                                onDragLeave={handleDragLeave}
+                                onDrop={(e) => handleDrop(e, folder.id)}
+                            >
+                                <a
+                                    href="#"
                                     onClick={(e) => { e.preventDefault(); onSelectFolder(folder.id); }}
                                     className={`flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors duration-150 ${
-                                        selectedFolder === folder.id 
-                                        ? 'bg-blue-100 text-blue-700' 
+                                        selectedFolder === folder.id
+                                        ? 'bg-blue-100 text-blue-700'
+                                        : dragOverFolder === folder.id
+                                        ? 'bg-green-100 text-green-700 ring-2 ring-green-400'
                                         : 'text-slate-600 hover:bg-slate-100'
                                     }`}
                                 >
@@ -51,9 +84,9 @@ const Sidebar = ({ folders, selectedFolder, onSelectFolder, onCompose }: Sidebar
                                         {folder.icon}
                                         <span>{folder.name}</span>
                                     </div>
-                                    {folder.id === 'inbox' && (
+                                    {counts && counts[folder.id as keyof typeof counts] > 0 && folder.id !== 'spam' && folder.id !== 'trash' && folder.id !== 'sent' && (
                                         <span className="bg-blue-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">
-                                            2022
+                                            {counts[folder.id as keyof typeof counts]}
                                         </span>
                                     )}
                                 </a>

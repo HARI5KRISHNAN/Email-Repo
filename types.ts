@@ -19,6 +19,9 @@ export interface BackendEmail {
   owner?: string;
   created_at?: string;
   received_at?: string;
+  is_read?: boolean;
+  is_starred?: boolean;
+  is_spam?: boolean;
 }
 
 export interface EmailListResponse {
@@ -42,7 +45,7 @@ export interface Email {
   isRead: boolean;
   isStarred: boolean;
   isImportant: boolean;
-  folder: 'inbox' | 'sent' | 'important' | 'draft' | 'trash';
+  folder: 'inbox' | 'sent' | 'important' | 'draft' | 'spam' | 'trash';
 }
 
 export interface KeycloakProps {
@@ -50,7 +53,7 @@ export interface KeycloakProps {
 }
 
 export interface Folder {
-  id: 'inbox' | 'sent' | 'important' | 'draft' | 'trash' | 'schedule' | 'calendar';
+  id: 'inbox' | 'sent' | 'important' | 'draft' | 'spam' | 'trash' | 'schedule' | 'calendar';
   name: string;
   icon: React.ReactNode;
 }
