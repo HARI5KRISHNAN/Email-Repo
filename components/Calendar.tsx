@@ -152,9 +152,9 @@ const Calendar: React.FC = () => {
         </div>
 
         {/* Calendar Grid */}
-        <div className="flex-1 overflow-y-auto flex">
+        <div className="flex-1 overflow-hidden flex">
           {/* Time column */}
-          <div className="w-24 border-r border-slate-200 bg-white flex-shrink-0 sticky left-0 z-10">
+          <div className="w-24 border-r border-slate-200 bg-white flex-shrink-0 overflow-y-auto">
             {hours.map((hour, idx) => (
               <div
                 key={hour}
@@ -168,7 +168,7 @@ const Calendar: React.FC = () => {
           </div>
 
           {/* Days grid */}
-          <div className="flex flex-1 overflow-x-auto">
+          <div className="flex flex-1 overflow-y-auto overflow-x-auto">
             {weekDays.map((day, dayIdx) => {
               const isToday =
                 day.getDate() === today.getDate() &&
