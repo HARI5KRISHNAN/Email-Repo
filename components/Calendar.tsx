@@ -13,7 +13,11 @@ interface Meeting {
   attendees: string[];
 }
 
-const hours = ['All Day', '8AM', '9AM', '10AM', '11AM', '12PM', '1PM', '2PM', '3PM', '4PM', '5PM', '6PM'];
+const hours = [
+  'All Day',
+  '12 AM', '1 AM', '2 AM', '3 AM', '4 AM', '5 AM', '6 AM', '7 AM', '8 AM', '9 AM', '10 AM', '11 AM',
+  '12 PM', '1 PM', '2 PM', '3 PM', '4 PM', '5 PM', '6 PM', '7 PM', '8 PM', '9 PM', '10 PM', '11 PM'
+];
 
 const colorPalette = ['bg-blue-500', 'bg-purple-500', 'bg-green-500', 'bg-red-500', 'bg-amber-500', 'bg-indigo-500'];
 
@@ -202,12 +206,10 @@ const Calendar: React.FC = () => {
                         const endHour = endDate.getHours();
                         const endMinutes = endDate.getMinutes();
 
-                        // Calculate position (8AM = 0, each hour = 96px)
-                        const topOffset = (startHour - 8) * 96 + (startMinutes / 60) * 96;
+                        // Calculate position (12AM = 0, each hour = 96px)
+                        const topOffset = startHour * 96 + (startMinutes / 60) * 96;
                         const duration = (endHour * 60 + endMinutes) - (startHour * 60 + startMinutes);
                         const height = (duration / 60) * 96;
-
-                        if (startHour < 8 || startHour >= 20) return null; // Only show 8AM-8PM
 
                         return (
                           <div
@@ -215,7 +217,7 @@ const Calendar: React.FC = () => {
                             className={`absolute left-1 right-1 rounded-lg px-2 py-1 text-xs font-semibold cursor-pointer hover:shadow-lg transition pointer-events-auto overflow-hidden ${getColorForMeeting(meeting.id)} text-white`}
                             style={{
                               top: `${topOffset}px`,
-                              height: `${height}px`,
+                              height: `${Math.max(height, 40)}px`,
                               minHeight: '40px',
                             }}
                             title={`${meeting.title}\n${meeting.description}\nOrganizer: ${meeting.organizer}\nAttendees: ${meeting.attendees.length}`}
@@ -227,14 +229,25 @@ const Calendar: React.FC = () => {
                                 minute: '2-digit',
                                 hour12: true,
                               })}
+                              {' - '}
+                              {endDate.toLocaleTimeString('en-US', {
+                                hour: 'numeric',
+                                minute: '2-digit',
+                                hour12: true,
+                              })}
                             </div>
-                            {meeting.location && height > 60 && (
+                            {meeting.description && height > 60 && (
+                              <div className="text-xs opacity-80 truncate mt-1">
+                                {meeting.description}
+                              </div>
+                            )}
+                            {meeting.location && height > 80 && (
                               <div className="text-xs opacity-80 truncate mt-1">
                                 📍 {meeting.location}
                               </div>
                             )}
-                            {meeting.attendees && meeting.attendees.length > 0 && height > 80 && (
-                              <div className="text-xs mt-1 flex gap-1">
+                            {meeting.attendees && meeting.attendees.length > 0 && height > 100 && (
+                              <div className="text-xs mt-1 flex gap-1 flex-wrap">
                                 {Array.from({ length: Math.min(meeting.attendees.length, 5) }).map((_, i) => (
                                   <div key={i} className="w-3 h-3 rounded-full bg-white/30" />
                                 ))}
