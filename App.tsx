@@ -60,6 +60,8 @@ function App({ keycloak }: KeycloakProps) {
           endpoint = '/mail/spam';
         } else if (selectedFolder === 'trash') {
           endpoint = '/mail/trash';
+        } else if (selectedFolder === 'calendar') {
+          endpoint = '/mail/calendar';
         }
 
         const response = await api.get<EmailListResponse>(endpoint);
@@ -91,6 +93,8 @@ function App({ keycloak }: KeycloakProps) {
           endpoint = '/mail/spam';
         } else if (selectedFolder === 'trash') {
           endpoint = '/mail/trash';
+        } else if (selectedFolder === 'calendar') {
+          endpoint = '/mail/calendar';
         }
         const response = await api.get<EmailListResponse>(endpoint);
         const transformedEmails = transformBackendEmails(response.data.rows, selectedFolder as any);

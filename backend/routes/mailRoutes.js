@@ -102,6 +102,26 @@ router.get('/mail/trash', authenticateToken, async (req, res) => {
   }
 });
 
+// get calendar folder for logged-in user
+router.get('/mail/calendar', authenticateToken, async (req, res) => {
+  const user = getUsername(req);
+  try {
+    const mailDomain = process.env.MAIL_DOMAIN || 'pilot180.local';
+    const userEmail = user.includes('@') ? user : `${user}@${mailDomain}`;
+
+    const q = await db.query(
+      `SELECT id, message_id, from_address, to_addresses, subject, body_text, body_html, folder, owner, is_starred, is_read, created_at
+       FROM mails
+       WHERE (owner = $1 OR $2 = ANY(to_addresses)) AND folder = 'CALENDAR'
+       ORDER BY created_at DESC LIMIT 200`, [user, userEmail]
+    );
+    res.json({ ok: true, rows: q.rows });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 // get starred/important emails for logged-in user
 router.get('/mail/important', authenticateToken, async (req, res) => {
   const user = getUsername(req);
