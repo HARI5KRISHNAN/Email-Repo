@@ -180,6 +180,48 @@ function App({ keycloak }: KeycloakProps) {
     }
   };
 
+  const handleMoveToSpam = async (emailId: string) => {
+    try {
+      // Call the move API to move to SPAM
+      await api.post(`/mail/${emailId}/move`, { to: 'SPAM' });
+
+      // Remove the email from current view
+      setEmails(prev => prev.filter(email => email.id !== emailId));
+
+      // Clear selection
+      setSelectedThreadId(null);
+
+      // Refresh counts to update sidebar
+      await fetchCounts();
+
+      console.log(`Moved email ${emailId} to SPAM`);
+    } catch (err) {
+      console.error('Failed to move to spam:', err);
+      alert('Failed to move to spam. Please try again.');
+    }
+  };
+
+  const handleMoveToTrash = async (emailId: string) => {
+    try {
+      // Call the move API to move to TRASH
+      await api.post(`/mail/${emailId}/move`, { to: 'TRASH' });
+
+      // Remove the email from current view
+      setEmails(prev => prev.filter(email => email.id !== emailId));
+
+      // Clear selection
+      setSelectedThreadId(null);
+
+      // Refresh counts to update sidebar
+      await fetchCounts();
+
+      console.log(`Moved email ${emailId} to TRASH`);
+    } catch (err) {
+      console.error('Failed to move to trash:', err);
+      alert('Failed to move to trash. Please try again.');
+    }
+  };
+
   const threads = useMemo(() => {
     const groups: { [key: string]: Email[] } = {};
     emails.forEach(email => {
@@ -300,7 +342,12 @@ function App({ keycloak }: KeycloakProps) {
             )}
           </div>
           <div className="flex-1 bg-white hidden md:block">
-            <EmailDetail thread={selectedThread} onMarkAsUnread={handleMarkAsUnread} />
+            <EmailDetail
+              thread={selectedThread}
+              onMarkAsUnread={handleMarkAsUnread}
+              onMoveToSpam={handleMoveToSpam}
+              onMoveToTrash={handleMoveToTrash}
+            />
           </div>
         </main>
       </div>

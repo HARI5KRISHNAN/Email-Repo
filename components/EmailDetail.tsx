@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import { Email, ToolbarItem, Recipient } from '../types';
-import { ALL_TOOLBAR_ITEMS, DEFAULT_TOOLBAR_ITEM_IDS, DotsVerticalIcon, ReplyIcon, UnreadIcon, StarIcon, PaperclipIcon, ChevronDownIcon, CogIcon, SignatureIcon, ReplyAllIcon, SparklesIcon } from '../constants';
+import { ALL_TOOLBAR_ITEMS, DEFAULT_TOOLBAR_ITEM_IDS, DotsVerticalIcon, ReplyIcon, UnreadIcon, StarIcon, PaperclipIcon, ChevronDownIcon, CogIcon, SignatureIcon, ReplyAllIcon, SparklesIcon, ArchiveIcon, TrashIcon } from '../constants';
 import api from '../api';
 
 const isValidEmail = (email: string): boolean => {
@@ -676,9 +676,11 @@ const ThreadMessage: React.FC<ThreadMessageProps> = ({ email, isExpanded, onTogg
 interface EmailDetailProps {
     thread: Email[] | null;
     onMarkAsUnread?: (emailId: string) => void;
+    onMoveToSpam?: (emailId: string) => void;
+    onMoveToTrash?: (emailId: string) => void;
 }
 
-const EmailDetail = ({ thread, onMarkAsUnread }: EmailDetailProps) => {
+const EmailDetail = ({ thread, onMarkAsUnread, onMoveToSpam, onMoveToTrash }: EmailDetailProps) => {
     const [isStarred, setIsStarred] = useState(false);
     const [isReplying, setIsReplying] = useState(false);
     const [replyTo, setReplyTo] = useState<Recipient[]>([]);
@@ -868,20 +870,20 @@ const EmailDetail = ({ thread, onMarkAsUnread }: EmailDetailProps) => {
                         </button>
                         <div className="h-6 border-l border-slate-300"></div>
                         <button
-                            onClick={handleStarToggle}
-                            className={`p-2 border border-transparent rounded-lg hover:bg-slate-100 ${isStarred ? 'text-yellow-500' : 'text-slate-500 hover:text-slate-800'}`}
-                            title={isStarred ? "Unstar this conversation" : "Star this conversation"}
-                            aria-label={isStarred ? "Unstar this conversation" : "Star this conversation"}
+                            onClick={() => onMoveToSpam && onMoveToSpam(latestMessage.id)}
+                            className="p-2 border border-transparent rounded-lg hover:bg-slate-100 text-slate-500 hover:text-orange-600"
+                            title="Mark as spam"
+                            aria-label="Mark as spam"
                         >
-                            <StarIcon className="w-5 h-5" isFilled={isStarred} />
+                            <ArchiveIcon className="w-5 h-5" />
                         </button>
                         <button
-                            onClick={() => onMarkAsUnread && onMarkAsUnread(latestMessage.id)}
-                            className="p-2 border border-transparent rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-800"
-                            title="Mark as unread"
-                            aria-label="Mark as unread"
+                            onClick={() => onMoveToTrash && onMoveToTrash(latestMessage.id)}
+                            className="p-2 border border-transparent rounded-lg hover:bg-slate-100 text-slate-500 hover:text-red-600"
+                            title="Move to trash"
+                            aria-label="Move to trash"
                         >
-                            <UnreadIcon className="w-5 h-5" />
+                            <TrashIcon className="w-5 h-5" />
                         </button>
                         <button className="p-2 border border-transparent rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-800" aria-label="More conversation options">
                             <DotsVerticalIcon className="w-5 h-5" />
