@@ -13,9 +13,10 @@ interface ThreadListItemProps {
     onTogglePin: (threadId: string) => void;
     onStarToggle: (emailId: string, isStarred: boolean) => void;
     onMarkAsUnread: (emailId: string) => void;
+    selectedFolder: string;
 }
 
-const ThreadListItem: React.FC<ThreadListItemProps> = ({ thread, isSelected, onSelect, isPinned, onTogglePin, onStarToggle, onMarkAsUnread }) => {
+const ThreadListItem: React.FC<ThreadListItemProps> = ({ thread, isSelected, onSelect, isPinned, onTogglePin, onStarToggle, onMarkAsUnread, selectedFolder }) => {
     const latestMessage = thread[0];
     const threadCount = thread.length;
     const isThreadUnread = thread.some(e => !e.isRead);
@@ -51,9 +52,16 @@ const ThreadListItem: React.FC<ThreadListItemProps> = ({ thread, isSelected, onS
         return `${Math.floor(seconds)}s ago`;
     };
 
+    const handleDragStart = (e: React.DragEvent) => {
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('emailId', latestMessage.id);
+    };
+
     return (
-        <div 
+        <div
             onClick={() => onSelect(latestMessage.threadId)}
+            draggable
+            onDragStart={handleDragStart}
             className={`group cursor-pointer border-b border-slate-200 p-4 ${isSelected ? 'bg-blue-50' : 'bg-white hover:bg-slate-50'}`}
         >
             <div className="flex items-start gap-4">
@@ -79,14 +87,16 @@ const ThreadListItem: React.FC<ThreadListItemProps> = ({ thread, isSelected, onS
                                 >
                                     <PinIcon className="w-5 h-5" isFilled={isPinned} />
                                 </button>
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); onMarkAsUnread(latestMessage.id); }}
-                                    title="Mark as unread"
-                                    className="p-1 rounded-full hover:bg-slate-200 hover:text-slate-800"
-                                    aria-label="Mark as unread"
-                                >
-                                    <UnreadIcon className="w-5 h-5" />
-                                </button>
+                                {selectedFolder !== 'sent' && (
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); onMarkAsUnread(latestMessage.id); }}
+                                        title="Mark as unread"
+                                        className="p-1 rounded-full hover:bg-slate-200 hover:text-slate-800"
+                                        aria-label="Mark as unread"
+                                    >
+                                        <UnreadIcon className="w-5 h-5" />
+                                    </button>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -114,9 +124,10 @@ interface EmailListProps {
     onTogglePin: (threadId: string) => void;
     onStarToggle: (emailId: string, isStarred: boolean) => void;
     onMarkAsUnread: (emailId: string) => void;
+    selectedFolder: string;
 }
 
-const EmailList = ({ threads, selectedThreadId, onSelectThread, searchQuery, onSearchChange, sortOrder, onSortChange, pinnedThreadIds, onTogglePin, onStarToggle, onMarkAsUnread }: EmailListProps) => {
+const EmailList = ({ threads, selectedThreadId, onSelectThread, searchQuery, onSearchChange, sortOrder, onSortChange, pinnedThreadIds, onTogglePin, onStarToggle, onMarkAsUnread, selectedFolder }: EmailListProps) => {
     const unreadCount = threads.reduce((count, thread) => {
         return count + (thread.some(e => !e.isRead) ? 1 : 0);
     }, 0);
@@ -165,6 +176,7 @@ const EmailList = ({ threads, selectedThreadId, onSelectThread, searchQuery, onS
                         onTogglePin={onTogglePin}
                         onStarToggle={onStarToggle}
                         onMarkAsUnread={onMarkAsUnread}
+                        selectedFolder={selectedFolder}
                     />
                 ))}
             </div>
