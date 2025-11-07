@@ -36,6 +36,20 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Request logging middleware
+app.use((req, res, next) => {
+  console.log(`📥 ${req.method} ${req.url} from ${req.get('origin') || 'no-origin'}`);
+
+  // Log response
+  const originalSend = res.send;
+  res.send = function(data) {
+    console.log(`📤 Response ${res.statusCode} for ${req.method} ${req.url}`);
+    return originalSend.call(this, data);
+  };
+
+  next();
+});
+
 // Session middleware (required by Keycloak)
 app.use(session({
   secret: process.env.SESSION_SECRET || 'keyboard cat',
@@ -47,6 +61,12 @@ app.use(session({
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
+});
+
+// Debug middleware before routes
+app.use('/api', (req, res, next) => {
+  console.log(`🔍 Before routes: ${req.method} ${req.url}`);
+  next();
 });
 
 // Mount mail routes
