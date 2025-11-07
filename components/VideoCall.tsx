@@ -17,8 +17,19 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomName, displayName, onClose })
   const jitsiApiRef = useRef<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const meetingLink = `https://meet.jit.si/${roomName}`;
+
+  const copyMeetingLink = () => {
+    navigator.clipboard.writeText(meetingLink);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+
     // Load Jitsi Meet External API script
     const loadJitsiScript = () => {
       return new Promise((resolve, reject) => {
@@ -31,14 +42,16 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomName, displayName, onClose })
         script.src = 'https://meet.jit.si/external_api.js';
         script.async = true;
         script.onload = () => resolve(window.JitsiMeetExternalAPI);
-        script.onerror = () => reject(new Error('Failed to load Jitsi Meet API'));
+        script.onerror = () => reject(new Error('Failed to load Jitsi Meet API. Please check your internet connection.'));
         document.body.appendChild(script);
       });
     };
 
     const initializeJitsi = async () => {
       try {
+        console.log('Loading Jitsi Meet API...');
         await loadJitsiScript();
+        console.log('Jitsi API loaded successfully');
 
         if (!jitsiContainerRef.current) return;
 
@@ -57,26 +70,35 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomName, displayName, onClose })
             disableDeepLinking: true,
             prejoinPageEnabled: false,
             enableWelcomePage: false,
+            enableClosePage: false,
           },
           interfaceConfigOverwrite: {
             TOOLBAR_BUTTONS: [
               'microphone', 'camera', 'closedcaptions', 'desktop', 'fullscreen',
-              'fodeviceselection', 'hangup', 'profile', 'chat', 'recording',
-              'livestreaming', 'etherpad', 'sharedvideo', 'settings', 'raisehand',
-              'videoquality', 'filmstrip', 'invite', 'feedback', 'stats', 'shortcuts',
-              'tileview', 'videobackgroundblur', 'download', 'help', 'mute-everyone',
+              'fodeviceselection', 'hangup', 'profile', 'chat',
+              'settings', 'raisehand', 'videoquality', 'filmstrip', 'invite',
+              'tileview', 'videobackgroundblur', 'help', 'mute-everyone',
             ],
             SHOW_JITSI_WATERMARK: false,
             SHOW_WATERMARK_FOR_GUESTS: false,
             DEFAULT_BACKGROUND: '#474747',
+            MOBILE_APP_PROMO: false,
           }
         };
 
+        console.log('Initializing Jitsi conference with room:', roomName);
         jitsiApiRef.current = new window.JitsiMeetExternalAPI(domain, options);
+
+        // Set a timeout to stop loading after 10 seconds
+        timeoutId = setTimeout(() => {
+          console.log('Jitsi load timeout - hiding loading screen');
+          setIsLoading(false);
+        }, 10000);
 
         // Event listeners
         jitsiApiRef.current.on('videoConferenceJoined', () => {
           console.log('User joined the video conference');
+          clearTimeout(timeoutId);
           setIsLoading(false);
         });
 
@@ -90,10 +112,20 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomName, displayName, onClose })
           onClose();
         });
 
+        // Hide loading when iframe is ready
+        jitsiApiRef.current.on('iframeReady', () => {
+          console.log('Jitsi iframe ready');
+          // Give it 2 more seconds then hide loading
+          setTimeout(() => {
+            setIsLoading(false);
+          }, 2000);
+        });
+
       } catch (err) {
         console.error('Failed to initialize Jitsi:', err);
-        setError('Failed to start video call. Please try again.');
+        setError(err instanceof Error ? err.message : 'Failed to start video call. Please check your internet connection and try again.');
         setIsLoading(false);
+        clearTimeout(timeoutId);
       }
     };
 
@@ -101,6 +133,7 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomName, displayName, onClose })
 
     // Cleanup
     return () => {
+      clearTimeout(timeoutId);
       if (jitsiApiRef.current) {
         jitsiApiRef.current.dispose();
         jitsiApiRef.current = null;
@@ -119,10 +152,35 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomName, displayName, onClose })
     <div className="fixed inset-0 z-50 bg-gray-900 flex flex-col">
       {/* Header */}
       <div className="bg-gray-800 px-4 py-3 flex items-center justify-between shadow-lg">
-        <div className="flex items-center gap-3">
-          <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-          <h2 className="text-white font-semibold text-lg">Video Meeting</h2>
-          <span className="text-gray-400 text-sm">Room: {roomName}</span>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+            <h2 className="text-white font-semibold text-lg">Video Meeting</h2>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-gray-400 text-sm">Room: {roomName}</span>
+            <button
+              onClick={copyMeetingLink}
+              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded transition-colors flex items-center gap-2"
+              title="Copy meeting link to invite others"
+            >
+              {copied ? (
+                <>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Copied!
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                  Copy Link
+                </>
+              )}
+            </button>
+          </div>
         </div>
         <button
           onClick={handleEndCall}
