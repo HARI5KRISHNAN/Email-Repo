@@ -361,6 +361,7 @@ function App({ keycloak }: KeycloakProps) {
                     onTogglePin={togglePinThread}
                     onStarToggle={handleStarToggle}
                     onMarkAsUnread={handleMarkAsUnread}
+                    selectedFolder={selectedFolder}
                   />
                 )}
               </div>

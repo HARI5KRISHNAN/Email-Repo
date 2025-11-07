@@ -84,7 +84,7 @@ const Sidebar = ({ folders, selectedFolder, onSelectFolder, onCompose, counts, o
                                         {folder.icon}
                                         <span>{folder.name}</span>
                                     </div>
-                                    {counts && counts[folder.id as keyof typeof counts] > 0 && folder.id !== 'spam' && folder.id !== 'trash' && (
+                                    {counts && counts[folder.id as keyof typeof counts] > 0 && folder.id !== 'spam' && folder.id !== 'trash' && folder.id !== 'sent' && (
                                         <span className="bg-blue-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">
                                             {counts[folder.id as keyof typeof counts]}
                                         </span>
