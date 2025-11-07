@@ -162,6 +162,24 @@ function App({ keycloak }: KeycloakProps) {
     }
   };
 
+  const handleEmailDrop = async (emailId: string, targetFolder: string) => {
+    try {
+      // Call the move API
+      await api.post(`/mail/${emailId}/move`, { to: targetFolder });
+
+      // Remove the email from current view
+      setEmails(prev => prev.filter(email => email.id !== emailId));
+
+      // Refresh counts to update sidebar
+      await fetchCounts();
+
+      console.log(`Moved email ${emailId} to ${targetFolder}`);
+    } catch (err) {
+      console.error('Failed to move email:', err);
+      alert('Failed to move email. Please try again.');
+    }
+  };
+
   const threads = useMemo(() => {
     const groups: { [key: string]: Email[] } = {};
     emails.forEach(email => {
@@ -250,6 +268,7 @@ function App({ keycloak }: KeycloakProps) {
           }}
           onCompose={() => setShowCompose(true)}
           counts={folderCounts}
+          onEmailDrop={handleEmailDrop}
         />
         <main className="flex flex-1 overflow-hidden border-l border-slate-200">
           <div className="w-full md:w-[350px] lg:w-[400px] xl:w-[450px] bg-white border-r border-slate-200 flex-shrink-0">

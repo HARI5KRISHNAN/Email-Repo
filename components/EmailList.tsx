@@ -51,9 +51,16 @@ const ThreadListItem: React.FC<ThreadListItemProps> = ({ thread, isSelected, onS
         return `${Math.floor(seconds)}s ago`;
     };
 
+    const handleDragStart = (e: React.DragEvent) => {
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('emailId', latestMessage.id);
+    };
+
     return (
-        <div 
+        <div
             onClick={() => onSelect(latestMessage.threadId)}
+            draggable
+            onDragStart={handleDragStart}
             className={`group cursor-pointer border-b border-slate-200 p-4 ${isSelected ? 'bg-blue-50' : 'bg-white hover:bg-slate-50'}`}
         >
             <div className="flex items-start gap-4">
