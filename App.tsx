@@ -24,6 +24,7 @@ function App({ keycloak }: KeycloakProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCompose, setShowCompose] = useState(false);
+  const [editingDraft, setEditingDraft] = useState<any>(null);
   const [folderCounts, setFolderCounts] = useState<{ inbox: number; sent: number; important: number; spam: number; trash: number; draft: number }>({ inbox: 0, sent: 0, important: 0, spam: 0, trash: 0, draft: 0 });
 
   // Load pinned threads from localStorage
@@ -163,10 +164,23 @@ function App({ keycloak }: KeycloakProps) {
   };
 
   const handleThreadSelect = async (threadId: string) => {
+    // Check if this is a draft
+    const thread = threads[threadId];
+    if (thread && thread[0] && thread[0].folder === 'draft') {
+      // Open draft in compose window
+      const draftEmail = thread[0];
+      const draftData = draftEmail.draftData;
+
+      if (draftData) {
+        setEditingDraft(draftData);
+        setShowCompose(true);
+      }
+      return;
+    }
+
     setSelectedThreadId(threadId);
 
     // Mark all unread emails in the thread as read
-    const thread = threads[threadId];
     if (thread) {
       const unreadEmails = thread.filter(email => !email.isRead);
       for (const email of unreadEmails) {
@@ -409,11 +423,16 @@ function App({ keycloak }: KeycloakProps) {
       {showCompose && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <Compose
-            onClose={() => setShowCompose(false)}
+            onClose={() => {
+              setShowCompose(false);
+              setEditingDraft(null);
+            }}
             onSent={() => {
               setShowCompose(false);
+              setEditingDraft(null);
               handleEmailSent();
             }}
+            draft={editingDraft}
           />
         </div>
       )}

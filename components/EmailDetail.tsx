@@ -250,7 +250,7 @@ const ReplyBox = ({
     setTo: (recipients: Recipient[]) => void;
     setCc: (recipients: Recipient[]) => void;
     setSubject: (subject: string) => void;
-    onCancel: () => void;
+    onCancel: (content?: string) => void;
     initialContent: string;
 }) => {
     const [replyContent, setReplyContent] = useState('');
@@ -377,10 +377,11 @@ const ReplyBox = ({
     };
 
     const handleDiscard = () => {
+        const content = editorRef.current?.innerHTML || '';
         if (editorRef.current) editorRef.current.innerHTML = '';
         setReplyContent('');
         setAttachments([]);
-        onCancel();
+        onCancel(content);
     };
     
     const handleRewrite = async () => {
@@ -693,6 +694,7 @@ const EmailDetail = ({ thread, onMarkAsUnread, onMoveToSpam, onMoveToTrash }: Em
     const [subject, setSubject] = useState('');
     const subjectRef = useRef<HTMLTextAreaElement>(null);
     const [showDiscardDialog, setShowDiscardDialog] = useState(false);
+    const [pendingReplyContent, setPendingReplyContent] = useState('');
 
     useEffect(() => {
         if (thread && thread.length > 0) {
@@ -831,9 +833,10 @@ const EmailDetail = ({ thread, onMarkAsUnread, onMoveToSpam, onMoveToTrash }: Em
         setIsReplying(true);
     };
 
-    const handleCancelReply = () => {
+    const handleCancelReply = (content?: string) => {
         // Check if user has made changes (recipients added means they're composing)
         if (replyTo.length > 0 || replyCc.length > 0) {
+            setPendingReplyContent(content || '');
             setShowDiscardDialog(true);
         } else {
             confirmCancelReply();
@@ -849,10 +852,50 @@ const EmailDetail = ({ thread, onMarkAsUnread, onMoveToSpam, onMoveToTrash }: Em
         setShowDiscardDialog(false);
     };
 
-    const handleSaveReplyDraft = () => {
-        // TODO: Implement draft saving functionality
-        alert('Reply draft saved successfully!');
-        confirmCancelReply();
+    const handleForward = () => {
+        setReplyTo([]);
+        setReplyCc([]);
+        setReplySubject(latestMessage.subject.startsWith('Fwd: ') ? latestMessage.subject : `Fwd: ${latestMessage.subject}`);
+        const quoteHeader = `
+            <br><br>
+            <div style="margin-top: 20px; padding-top: 10px; border-top: 1px solid #e5e7eb;">
+                <div style="font-size: 0.875rem; color: #6b7280; margin-bottom: 1rem;">
+                    <p><strong>---------- Forwarded message ---------</strong></p>
+                    <p><strong>From:</strong> ${latestMessage.sender}</p>
+                    <p><strong>Date:</strong> ${new Date(latestMessage.timestamp).toLocaleString()}</p>
+                    <p><strong>Subject:</strong> ${latestMessage.subject}</p>
+                    <p><strong>To:</strong> ${latestMessage.to.map(r => r.name).join(', ')}</p>
+                </div>
+                <div>
+                    ${latestMessage.body}
+                </div>
+            </div>`;
+        setInitialReplyContent(quoteHeader);
+        setIsReplying(true);
+    };
+
+    const handleSaveReplyDraft = async () => {
+        try {
+            const toArray = replyTo.map(r => r.email);
+            const ccArray = replyCc.map(r => r.email);
+
+            const draftType = replySubject.startsWith('Fwd: ') ? 'forward' : 'reply';
+
+            await api.post('/mail/drafts', {
+                to: toArray,
+                cc: ccArray,
+                subject: replySubject,
+                body: pendingReplyContent,
+                draftType: draftType,
+                inReplyTo: latestMessage.id
+            });
+
+            alert(`${draftType === 'forward' ? 'Forward' : 'Reply'} draft saved successfully!`);
+            confirmCancelReply();
+        } catch (err: any) {
+            console.error('Failed to save reply draft:', err);
+            alert('Failed to save draft: ' + (err.response?.data?.error || err.message));
+        }
     };
     
 
@@ -878,7 +921,7 @@ const EmailDetail = ({ thread, onMarkAsUnread, onMoveToSpam, onMoveToTrash }: Em
                         <button onClick={handleReplyAll} className="flex items-center gap-2 px-4 py-2 text-sm font-semibold border border-slate-300 rounded-lg hover:bg-slate-100" aria-label="Reply to all">
                             <ReplyAllIcon className="w-4 h-4" /> Reply All
                         </button>
-                        <button className="flex items-center gap-2 px-4 py-2 text-sm font-semibold border border-slate-300 rounded-lg hover:bg-slate-100" aria-label="Forward">
+                        <button onClick={handleForward} className="flex items-center gap-2 px-4 py-2 text-sm font-semibold border border-slate-300 rounded-lg hover:bg-slate-100" aria-label="Forward">
                             <ReplyIcon className="w-4 h-4 -scale-x-100" /> Forward
                         </button>
                          <button onClick={handleSummarize} disabled={isSummarizing} className="flex items-center gap-2 px-4 py-2 text-sm font-semibold border border-slate-300 rounded-lg hover:bg-slate-100 disabled:opacity-50 disabled:cursor-wait" aria-label="Summarize with AI">
