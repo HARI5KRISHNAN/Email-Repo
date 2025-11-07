@@ -71,7 +71,7 @@ const ScheduleMeeting: React.FC<ScheduleMeetingProps> = ({ onJoinMeeting }) => {
   const startAndJoinInstantMeeting = () => {
     // Generate meeting ID
     const meetingId = Math.random().toString(36).substring(2, 15);
-    const link = `https://meet.pilot180.local/${meetingId}`;
+    const link = `https://meet.jit.si/${meetingId}`;
 
     // Create meeting data
     const meetingData = {
@@ -79,24 +79,31 @@ const ScheduleMeeting: React.FC<ScheduleMeetingProps> = ({ onJoinMeeting }) => {
       displayName: 'User' // You can get this from keycloak or user context
     };
 
-    // Save meeting to backend (optional - for calendar display)
-    const now = new Date();
-    const endTime = new Date(now.getTime() + 60 * 60 * 1000);
-
-    api.post('/meetings', {
-      title: 'Instant Meeting',
-      description: 'Quick video conference',
-      start_time: now.toISOString(),
-      end_time: endTime.toISOString(),
-      location: 'Online Meeting',
-      meeting_link: link,
-      attendees: []
-    }).catch(err => console.error('Failed to save instant meeting:', err));
-
-    // Launch video call immediately
+    // Launch video call immediately (no backend dependency)
     if (onJoinMeeting) {
       onJoinMeeting(meetingData);
     }
+
+    // Optionally save meeting to backend (don't block if it fails)
+    // This happens in background, won't affect video call
+    const now = new Date();
+    const endTime = new Date(now.getTime() + 60 * 60 * 1000);
+
+    // Use setTimeout to ensure video call launches first
+    setTimeout(() => {
+      api.post('/meetings', {
+        title: 'Instant Meeting',
+        description: 'Quick video conference',
+        start_time: now.toISOString(),
+        end_time: endTime.toISOString(),
+        location: 'Online Meeting',
+        meeting_link: link,
+        attendees: []
+      }).catch(err => {
+        // Silently fail - video call already launched
+        console.log('Note: Meeting not saved to calendar (optional feature)');
+      });
+    }, 100);
   };
 
   const addAttendee = () => {
