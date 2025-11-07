@@ -151,24 +151,25 @@ const Calendar: React.FC = () => {
           <div className="w-32" />
         </div>
 
-        {/* Calendar Grid */}
-        <div className="flex-1 overflow-hidden flex">
-          {/* Time column */}
-          <div className="w-24 border-r border-slate-200 bg-white flex-shrink-0 overflow-y-auto">
-            {hours.map((hour, idx) => (
-              <div
-                key={hour}
-                className={`h-24 border-b border-slate-200 text-xs text-slate-500 px-2 py-1 ${
-                  idx === 0 ? 'font-semibold' : ''
-                }`}
-              >
-                {hour}
-              </div>
-            ))}
-          </div>
+        {/* Calendar Grid - Single scroll on left */}
+        <div className="flex-1 flex overflow-y-auto">
+          <div className="flex flex-1 min-w-full">
+            {/* Time column */}
+            <div className="w-24 border-r border-slate-200 bg-white flex-shrink-0">
+              {hours.map((hour, idx) => (
+                <div
+                  key={hour}
+                  className={`h-24 border-b border-slate-200 text-xs text-slate-500 px-2 py-1 ${
+                    idx === 0 ? 'font-semibold' : ''
+                  }`}
+                >
+                  {hour}
+                </div>
+              ))}
+            </div>
 
-          {/* Days grid */}
-          <div className="flex flex-1 overflow-y-auto overflow-x-auto">
+            {/* Days grid */}
+            <div className="flex flex-1 overflow-x-auto">
             {weekDays.map((day, dayIdx) => {
               const isToday =
                 day.getDate() === today.getDate() &&
@@ -264,6 +265,7 @@ const Calendar: React.FC = () => {
                 </div>
               );
             })}
+            </div>
           </div>
         </div>
       </div>
