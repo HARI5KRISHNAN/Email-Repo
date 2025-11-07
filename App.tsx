@@ -7,6 +7,7 @@ import EmailDetail from './components/EmailDetail';
 import Compose from './components/Compose';
 import Calendar from './components/Calendar';
 import ScheduleMeeting from './components/ScheduleMeeting';
+import VideoCall from './components/VideoCall';
 import { folders } from './constants';
 import { Email, Folder, KeycloakProps, EmailListResponse } from './types';
 import api from './api';
@@ -24,7 +25,9 @@ function App({ keycloak }: KeycloakProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCompose, setShowCompose] = useState(false);
+  const [editingDraft, setEditingDraft] = useState<any>(null);
   const [folderCounts, setFolderCounts] = useState<{ inbox: number; sent: number; important: number; spam: number; trash: number; draft: number }>({ inbox: 0, sent: 0, important: 0, spam: 0, trash: 0, draft: 0 });
+  const [activeVideoCall, setActiveVideoCall] = useState<{ roomName: string; displayName: string } | null>(null);
 
   // Load pinned threads from localStorage
   useEffect(() => {
@@ -163,10 +166,23 @@ function App({ keycloak }: KeycloakProps) {
   };
 
   const handleThreadSelect = async (threadId: string) => {
+    // Check if this is a draft
+    const thread = threads[threadId];
+    if (thread && thread[0] && thread[0].folder === 'draft') {
+      // Open draft in compose window
+      const draftEmail = thread[0];
+      const draftData = draftEmail.draftData;
+
+      if (draftData) {
+        setEditingDraft(draftData);
+        setShowCompose(true);
+      }
+      return;
+    }
+
     setSelectedThreadId(threadId);
 
     // Mark all unread emails in the thread as read
-    const thread = threads[threadId];
     if (thread) {
       const unreadEmails = thread.filter(email => !email.isRead);
       for (const email of unreadEmails) {
@@ -263,6 +279,22 @@ function App({ keycloak }: KeycloakProps) {
     }
   };
 
+  const handleJoinMeeting = (meeting: any) => {
+    // Extract meeting ID from meeting_link if it exists
+    let roomName = meeting.id;
+    if (meeting.meeting_link) {
+      const match = meeting.meeting_link.match(/\/([^\/]+)$/);
+      if (match) {
+        roomName = match[1];
+      }
+    }
+
+    setActiveVideoCall({
+      roomName: roomName,
+      displayName: keycloak.tokenParsed?.preferred_username || 'User'
+    });
+  };
+
   const threads = useMemo(() => {
     const groups: { [key: string]: Email[] } = {};
     emails.forEach(email => {
@@ -356,11 +388,11 @@ function App({ keycloak }: KeycloakProps) {
         <main className="flex flex-1 overflow-hidden border-l border-slate-200">
           {selectedFolder === 'calendar' ? (
             <div className="flex-1 bg-white">
-              <Calendar />
+              <Calendar onJoinMeeting={handleJoinMeeting} />
             </div>
           ) : selectedFolder === 'schedule' ? (
             <div className="flex-1 bg-white">
-              <ScheduleMeeting />
+              <ScheduleMeeting onJoinMeeting={(data) => setActiveVideoCall(data)} />
             </div>
           ) : (
             <>
@@ -409,13 +441,26 @@ function App({ keycloak }: KeycloakProps) {
       {showCompose && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <Compose
-            onClose={() => setShowCompose(false)}
+            onClose={() => {
+              setShowCompose(false);
+              setEditingDraft(null);
+            }}
             onSent={() => {
               setShowCompose(false);
+              setEditingDraft(null);
               handleEmailSent();
             }}
+            draft={editingDraft}
           />
         </div>
+      )}
+
+      {activeVideoCall && (
+        <VideoCall
+          roomName={activeVideoCall.roomName}
+          displayName={activeVideoCall.displayName}
+          onClose={() => setActiveVideoCall(null)}
+        />
       )}
     </div>
   );

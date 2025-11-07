@@ -1,15 +1,26 @@
 import React, { useState } from 'react';
 import api from '../api';
 
+interface DraftData {
+  id: number;
+  to_recipients: string[];
+  cc_recipients: string[];
+  subject: string;
+  body: string;
+  draft_type: string;
+  in_reply_to?: string;
+}
+
 interface ComposeProps {
   onClose?: () => void;
   onSent?: () => void;
+  draft?: DraftData;
 }
 
-export default function Compose({ onClose, onSent }: ComposeProps) {
-  const [to, setTo] = useState('');
-  const [subject, setSubject] = useState('');
-  const [body, setBody] = useState('');
+export default function Compose({ onClose, onSent, draft }: ComposeProps) {
+  const [to, setTo] = useState(draft ? draft.to_recipients.join(', ') : '');
+  const [subject, setSubject] = useState(draft?.subject || '');
+  const [body, setBody] = useState(draft?.body || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showDiscardDialog, setShowDiscardDialog] = useState(false);
@@ -35,13 +46,20 @@ export default function Compose({ onClose, onSent }: ComposeProps) {
     try {
       const toArray = to.split(',').map(s => s.trim()).filter(Boolean);
 
-      await api.post('/mail/drafts', {
+      const payload: any = {
         to: toArray,
         cc: [],
         subject,
         body,
         draftType: 'compose'
-      });
+      };
+
+      // If editing an existing draft, include the ID to update it
+      if (draft) {
+        payload.id = draft.id;
+      }
+
+      await api.post('/mail/drafts', payload);
 
       setShowDiscardDialog(false);
       if (onSent) onSent(); // Trigger refresh
@@ -65,6 +83,15 @@ export default function Compose({ onClose, onSent }: ComposeProps) {
         text: body,
         html: body.replace(/\n/g, '<br>')
       });
+
+      // If we were editing a draft, delete it after sending
+      if (draft) {
+        try {
+          await api.delete(`/mail/drafts/${draft.id}`);
+        } catch (err) {
+          console.error('Failed to delete draft after send:', err);
+        }
+      }
 
       // Clear form
       setTo('');
