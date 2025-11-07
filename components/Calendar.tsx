@@ -152,9 +152,9 @@ const Calendar: React.FC = () => {
         </div>
 
         {/* Calendar Grid */}
-        <div className="flex-1 overflow-hidden flex">
+        <div className="flex-1 overflow-y-auto flex">
           {/* Time column */}
-          <div className="w-24 border-r border-slate-200 bg-white flex-shrink-0 overflow-y-auto">
+          <div className="w-24 border-r border-slate-200 bg-white flex-shrink-0 sticky left-0 z-10">
             {hours.map((hour, idx) => (
               <div
                 key={hour}
@@ -269,7 +269,7 @@ const Calendar: React.FC = () => {
       </div>
 
       {/* Right Sidebar - Mini Calendar */}
-      <div className="w-72 border-l border-slate-200 flex flex-col bg-white overflow-y-auto">
+      <div className="w-72 border-l border-slate-200 flex flex-col bg-white">
         <div className="px-5 py-6">
           <div className="flex items-center justify-between mb-5">
             <h3 className="text-sm font-semibold text-slate-700">
