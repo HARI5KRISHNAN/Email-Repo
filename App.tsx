@@ -372,7 +372,7 @@ function App({ keycloak }: KeycloakProps) {
 
   return (
     <div className="h-screen w-screen bg-slate-50 text-slate-800 flex flex-col overflow-hidden">
-      <Header />
+      <Header keycloak={keycloak} />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar
           folders={folders}
