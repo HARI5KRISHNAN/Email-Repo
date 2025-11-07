@@ -27,8 +27,9 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Token expired or invalid, redirect to login
-      keycloak.login();
+      // Token expired or invalid - log message but don't force redirect
+      console.log('Authentication required for this feature. Please login to access email features.');
+      // Optionally, you could show a toast notification here instead of forcing login
     }
     return Promise.reject(error);
   }

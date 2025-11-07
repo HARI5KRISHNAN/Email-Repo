@@ -1,6 +1,7 @@
 import React from 'react';
 // FIX: Imported StarIcon to fix 'Cannot find name 'StarIcon'' error.
 import { DotsVerticalIcon, StarIcon } from '../constants';
+import { KeycloakProps } from '../types';
 
 const BellIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -22,7 +23,18 @@ const MenuIcon = () => (
 );
 
 
-const Header = () => {
+const Header = ({ keycloak }: KeycloakProps) => {
+    const isAuthenticated = keycloak?.authenticated || false;
+    const username = keycloak?.tokenParsed?.preferred_username || 'Guest';
+
+    const handleLogin = () => {
+        keycloak?.login();
+    };
+
+    const handleLogout = () => {
+        keycloak?.logout();
+    };
+
     return (
         <header className="bg-white border-b border-slate-200 flex-shrink-0">
             <div className="w-full mx-auto px-4 sm:px-6 lg:px-8">
@@ -36,12 +48,36 @@ const Header = () => {
                         </div>
                     </div>
                     <div className="flex items-center space-x-4 text-slate-500">
-                        <button className="hover:text-slate-800"><BellIcon /></button>
-                        <button className="hover:text-slate-800"><CogIcon /></button>
-                        <button className="hover:text-slate-800"><MenuIcon /></button>
-                        <button className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-                        </button>
+                        {!isAuthenticated ? (
+                            <button
+                                onClick={handleLogin}
+                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+                            >
+                                Login
+                            </button>
+                        ) : (
+                            <>
+                                <button className="hover:text-slate-800"><BellIcon /></button>
+                                <button className="hover:text-slate-800"><CogIcon /></button>
+                                <button className="hover:text-slate-800"><MenuIcon /></button>
+                                <div className="relative group">
+                                    <button className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm hover:bg-blue-700">
+                                        {username.charAt(0).toUpperCase()}
+                                    </button>
+                                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 hidden group-hover:block z-50">
+                                        <div className="px-4 py-2 text-sm text-slate-700 border-b">
+                                            {username}
+                                        </div>
+                                        <button
+                                            onClick={handleLogout}
+                                            className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-100"
+                                        >
+                                            Logout
+                                        </button>
+                                    </div>
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
             </div>

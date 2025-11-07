@@ -11,14 +11,11 @@ if (!rootElement) {
 
 // Initialize Keycloak before mounting the app
 keycloak.init({
-  onLoad: "login-required",
+  onLoad: "check-sso", // Check login status but don't force login
   checkLoginIframe: false, // Disable iframe for better compatibility
   pkceMethod: 'S256'
 }).then((authenticated) => {
-  if (!authenticated) {
-    console.warn("Not authenticated!");
-    keycloak.login();
-  } else {
+  if (authenticated) {
     console.log("Authenticated as:", keycloak.tokenParsed?.preferred_username);
     console.log("User email:", keycloak.tokenParsed?.email);
 
@@ -30,17 +27,28 @@ keycloak.init({
         }
       }).catch(() => {
         console.error('Failed to refresh token');
-        keycloak.login();
+        // Don't force login on refresh failure
+        console.log('Token refresh failed - user will need to re-login for email features');
       });
     }, 60000);
-
-    const root = ReactDOM.createRoot(rootElement);
-    root.render(
-      <React.StrictMode>
-        <App keycloak={keycloak} />
-      </React.StrictMode>
-    );
+  } else {
+    console.log("Not authenticated - limited features available (video calls work)");
   }
+
+  // Mount app regardless of authentication status
+  const root = ReactDOM.createRoot(rootElement);
+  root.render(
+    <React.StrictMode>
+      <App keycloak={keycloak} />
+    </React.StrictMode>
+  );
 }).catch((err) => {
   console.error("Keycloak init failed", err);
+  // Mount app anyway for video calls
+  const root = ReactDOM.createRoot(rootElement);
+  root.render(
+    <React.StrictMode>
+      <App keycloak={keycloak} />
+    </React.StrictMode>
+  );
 });
