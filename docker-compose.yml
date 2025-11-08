@@ -87,6 +87,10 @@ services:
       - MAIL_DOMAIN=pilot180.local
       - SMTP_RECEIVER_PORT=2525
       - SESSION_SECRET=your_random_secret_change_this_in_production
+      - JITSI_JWT_SECRET=${JITSI_JWT_SECRET:-ChangeMeToRandomSecret123!}
+      - JITSI_DOMAIN=${JITSI_DOMAIN:-localhost}
+      - JITSI_PORT=${JITSI_PORT:-8000}
+      - JITSI_SECURE=${JITSI_SECURE:-false}
     depends_on:
       postgres:
         condition: service_healthy

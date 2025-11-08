@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import api from '../api';
 
 interface VideoCallProps {
   roomName: string;
@@ -18,8 +19,12 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomName, displayName, onClose })
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [jitsiToken, setJitsiToken] = useState<string | null>(null);
 
-  const meetingLink = `https://meet.jit.si/${roomName}`;
+  // Use self-hosted Jitsi domain
+  const jitsiDomain = import.meta.env.VITE_JITSI_DOMAIN || 'localhost';
+  const jitsiPort = import.meta.env.VITE_JITSI_PORT || '8000';
+  const meetingLink = `http://${jitsiDomain}:${jitsiPort}/${roomName}`;
 
   const copyMeetingLink = () => {
     navigator.clipboard.writeText(meetingLink);
@@ -30,6 +35,25 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomName, displayName, onClose })
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
 
+    // Fetch JWT token from backend
+    const fetchJitsiToken = async () => {
+      try {
+        console.log('🔑 Fetching Jitsi JWT token...');
+        const response = await api.get(`/jitsi/token?room=${encodeURIComponent(roomName)}`);
+        if (response.data.ok) {
+          console.log('✅ Jitsi token received');
+          setJitsiToken(response.data.token);
+          return response.data.token;
+        } else {
+          throw new Error('Failed to get Jitsi token');
+        }
+      } catch (err) {
+        console.error('❌ Failed to fetch Jitsi token:', err);
+        setError('Failed to authenticate with video server. Please try again.');
+        return null;
+      }
+    };
+
     // Load Jitsi Meet External API script
     const loadJitsiScript = () => {
       return new Promise((resolve, reject) => {
@@ -39,33 +63,41 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomName, displayName, onClose })
         }
 
         const script = document.createElement('script');
-        script.src = 'https://meet.jit.si/external_api.js';
+        // Use self-hosted Jitsi external API
+        script.src = `http://${jitsiDomain}:${jitsiPort}/external_api.js`;
         script.async = true;
         script.onload = () => resolve(window.JitsiMeetExternalAPI);
-        script.onerror = () => reject(new Error('Failed to load Jitsi Meet API. Please check your internet connection.'));
+        script.onerror = () => reject(new Error('Failed to load Jitsi Meet API. Please ensure Jitsi server is running.'));
         document.body.appendChild(script);
       });
     };
 
     const initializeJitsi = async () => {
       try {
+        // First, fetch the JWT token
+        const token = await fetchJitsiToken();
+        if (!token) {
+          setIsLoading(false);
+          return;
+        }
+
         console.log('Loading Jitsi Meet API...');
         await loadJitsiScript();
         console.log('Jitsi API loaded successfully');
 
         if (!jitsiContainerRef.current) return;
 
-        const domain = 'meet.jit.si';
         const options = {
           roomName: roomName,
           width: '100%',
           height: '100%',
           parentNode: jitsiContainerRef.current,
           userInfo: {
-            displayName: displayName || 'Guest'
+            displayName: displayName || 'Guest',
+            email: '',
           },
-          // No JWT - public access
-          jwt: undefined,
+          // Use JWT token from backend (Keycloak authenticated)
+          jwt: token,
           configOverwrite: {
             startWithAudioMuted: false,
             startWithVideoMuted: false,
@@ -81,22 +113,39 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomName, displayName, onClose })
             doNotStoreRoom: true,
             // Disable any authentication requirements
             enableFeaturesBasedOnToken: false,
-            disableProfile: false,
+            disableProfile: true,
             hideConferenceSubject: false,
             subject: roomName,
-            // Ensure guest access
+            // Ensure guest access - no moderator required
             enableInsecureRoomNameWarning: false,
             enableLobby: false,
+            lobby: {
+              autoKnock: false,
+              enableChat: false,
+            },
             // Disable analytics to prevent console spam
             analytics: {
               disabled: true,
             },
             disableThirdPartyRequests: true,
+            // Disable authentication completely
+            disableRemoteMute: false,
+            remoteVideoMenu: {
+              disableKick: true,
+              disableGrantModerator: true,
+            },
+            // Critical: Disable authentication/moderator requirements
+            authenticationRequired: false,
+            enableNoisyMicDetection: false,
+            disableInviteFunctions: false,
+            // Skip lobby - allow direct join
+            autoKnockLobby: false,
+            enableAutomaticUrlCopy: false,
           },
           interfaceConfigOverwrite: {
             TOOLBAR_BUTTONS: [
               'microphone', 'camera', 'closedcaptions', 'desktop', 'fullscreen',
-              'fodeviceselection', 'hangup', 'profile', 'chat',
+              'fodeviceselection', 'hangup', 'chat',
               'settings', 'raisehand', 'videoquality', 'filmstrip', 'invite',
               'tileview', 'videobackgroundblur', 'help', 'mute-everyone',
             ],
@@ -106,10 +155,16 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomName, displayName, onClose })
             MOBILE_APP_PROMO: false,
             DISABLE_JOIN_LEAVE_NOTIFICATIONS: false,
             HIDE_INVITE_MORE_HEADER: false,
+            DISABLE_PROFILE: true, // Hide profile button completely
+            DISABLE_DOMINANT_SPEAKER_INDICATOR: false,
           }
         };
 
-        console.log('Initializing Jitsi conference with room:', roomName);
+        console.log(`🎥 Initializing Jitsi conference with room: ${roomName}`);
+        console.log(`🌐 Using domain: ${jitsiDomain}:${jitsiPort}`);
+
+        // Initialize with domain that includes port for non-standard ports
+        const domain = jitsiPort === '443' || jitsiPort === '80' ? jitsiDomain : `${jitsiDomain}:${jitsiPort}`;
         jitsiApiRef.current = new window.JitsiMeetExternalAPI(domain, options);
 
         // Set a timeout to stop loading after 10 seconds
@@ -219,10 +274,18 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomName, displayName, onClose })
       {/* Loading State */}
       {isLoading && (
         <div className="absolute inset-0 bg-gray-900 flex items-center justify-center z-10">
-          <div className="text-center">
+          <div className="text-center max-w-md px-4">
             <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-white text-lg">Connecting to video call...</p>
-            <p className="text-gray-400 text-sm mt-2">Please allow camera and microphone access</p>
+            <p className="text-white text-lg font-semibold mb-2">Connecting to video call...</p>
+            <p className="text-gray-400 text-sm mt-2">Please allow camera and microphone access when prompted</p>
+            <div className="mt-6 p-4 bg-green-900/30 border border-green-500/30 rounded-lg">
+              <p className="text-green-300 text-sm font-medium mb-2">✅ Authenticated with Keycloak</p>
+              <p className="text-gray-300 text-xs leading-relaxed">
+                You're joining as <strong>{displayName}</strong>
+                <br/>
+                No additional login required - you're already authenticated!
+              </p>
+            </div>
           </div>
         </div>
       )}

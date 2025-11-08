@@ -3,6 +3,7 @@ import cors from 'cors';
 import session from 'express-session';
 import dotenv from 'dotenv';
 import mailRoutes from './routes/mailRoutes.js';
+import jitsiRoutes from './routes/jitsiRoutes.js';
 import { startSmtpServer } from './smtpReceiver.js';
 
 dotenv.config();
@@ -71,6 +72,9 @@ app.use('/api', (req, res, next) => {
 
 // Mount mail routes
 app.use('/api', mailRoutes);
+
+// Mount Jitsi routes
+app.use('/api', jitsiRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
