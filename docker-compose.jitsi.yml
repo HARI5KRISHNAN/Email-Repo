@@ -29,6 +29,10 @@ services:
       - XMPP_INTERNAL_MUC_DOMAIN=internal-muc.meet.jitsi
       - XMPP_GUEST_DOMAIN=guest.meet.jitsi
 
+      # WebSocket configuration for HTTP (non-secure)
+      - ENABLE_XMPP_WEBSOCKET=1
+      - XMPP_WEBSOCKET_URL=ws://localhost:8000/xmpp-websocket
+
       # JVB
       - JVB_TCP_HARVESTER_DISABLED=true
       - ENABLE_COLIBRI_WEBSOCKET=1
