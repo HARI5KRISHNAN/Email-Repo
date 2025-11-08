@@ -12,7 +12,7 @@ services:
     environment:
       # Basic config
       - ENABLE_AUTH=1
-      - ENABLE_GUESTS=0
+      - ENABLE_GUESTS=1
       - AUTH_TYPE=jwt
       - JWT_APP_ID=pilot180-jitsi
       - JWT_APP_SECRET=${JITSI_JWT_SECRET:-ChangeMeToRandomSecret123!}
@@ -29,9 +29,12 @@ services:
       - XMPP_INTERNAL_MUC_DOMAIN=internal-muc.meet.jitsi
       - XMPP_GUEST_DOMAIN=guest.meet.jitsi
 
-      # JVB
+      # Disable WebSocket, use BOSH only for HTTP setup
+      - ENABLE_XMPP_WEBSOCKET=0
+
+      # JVB - Disable WebSocket for video bridge too
       - JVB_TCP_HARVESTER_DISABLED=true
-      - ENABLE_COLIBRI_WEBSOCKET=1
+      - ENABLE_COLIBRI_WEBSOCKET=0
 
       # Interface
       - DISABLE_HTTPS=1
@@ -62,7 +65,7 @@ services:
       # Auth config
       - AUTH_TYPE=jwt
       - ENABLE_AUTH=1
-      - ENABLE_GUESTS=0
+      - ENABLE_GUESTS=1
       - JWT_APP_ID=pilot180-jitsi
       - JWT_APP_SECRET=${JITSI_JWT_SECRET:-ChangeMeToRandomSecret123!}
       - JWT_ACCEPTED_ISSUERS=pilot180-jitsi
@@ -89,7 +92,7 @@ services:
       # Other
       - TZ=UTC
       - PUBLIC_URL=http://localhost:8000
-      - ENABLE_GUESTS=0
+      - ENABLE_GUESTS=1
 
     networks:
       - jitsi-meet
@@ -123,11 +126,9 @@ services:
       - XMPP_SERVER=jitsi-prosody
       - PUBLIC_URL=http://localhost:8000
 
-      # Colibri
-      - ENABLE_COLIBRI_WEBSOCKET=1
+      # Colibri - Disable WebSocket for HTTP mode
+      - ENABLE_COLIBRI_WEBSOCKET=0
       - COLIBRI_REST_ENABLED=true
-      - JVB_WS_DOMAIN=localhost:8000
-      - JVB_WS_SERVER_ID=jvb1
 
       # Other
       - TZ=UTC

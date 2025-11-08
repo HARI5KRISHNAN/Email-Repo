@@ -35,28 +35,6 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomName, displayName, onClose })
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
 
-    // Check if Jitsi server is reachable
-    const checkJitsiServer = async () => {
-      try {
-        console.log('🔍 Checking Jitsi server availability...');
-        const healthCheckUrl = `http://${jitsiDomain}:${jitsiPort}/`;
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-
-        const response = await fetch(healthCheckUrl, {
-          method: 'HEAD',
-          signal: controller.signal
-        });
-        clearTimeout(timeoutId);
-
-        console.log('✅ Jitsi server is reachable');
-        return true;
-      } catch (err) {
-        console.error('❌ Jitsi server is not reachable:', err);
-        return false;
-      }
-    };
-
     // Fetch JWT token from backend
     const fetchJitsiToken = async () => {
       try {
@@ -69,9 +47,18 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomName, displayName, onClose })
         } else {
           throw new Error('Failed to get Jitsi token');
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error('❌ Failed to fetch Jitsi token:', err);
-        setError('Failed to authenticate with video server. Please try again.');
+        console.error('Error response:', err.response);
+
+        if (err.response?.status === 401) {
+          setError(
+            'Authentication failed. Your session may have expired.\n\n' +
+            'Please refresh the page and log in again.'
+          );
+        } else {
+          setError(`Failed to authenticate with video server: ${err.message}`);
+        }
         return null;
       }
     };
@@ -89,26 +76,20 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomName, displayName, onClose })
         script.src = `http://${jitsiDomain}:${jitsiPort}/external_api.js`;
         script.async = true;
         script.onload = () => resolve(window.JitsiMeetExternalAPI);
-        script.onerror = () => reject(new Error('Failed to load Jitsi Meet API. Please ensure Jitsi server is running.'));
+        script.onerror = () => {
+          reject(new Error(
+            `Failed to load Jitsi Meet API from ${jitsiDomain}:${jitsiPort}.\n\n` +
+            `Please ensure the Jitsi server is running:\n` +
+            `docker compose -f docker-compose.jitsi.yml up -d\n\n` +
+            `Then refresh this page.`
+          ));
+        };
         document.body.appendChild(script);
       });
     };
 
     const initializeJitsi = async () => {
       try {
-        // First, check if Jitsi server is reachable
-        const serverReachable = await checkJitsiServer();
-        if (!serverReachable) {
-          setError(
-            `Jitsi video server is not running or not accessible at ${jitsiDomain}:${jitsiPort}.\n\n` +
-            `To start the Jitsi server, run:\n` +
-            `docker compose -f docker-compose.jitsi.yml up -d\n\n` +
-            `Then refresh this page.`
-          );
-          setIsLoading(false);
-          return;
-        }
-
         // Fetch the JWT token
         const token = await fetchJitsiToken();
         if (!token) {
@@ -236,16 +217,35 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomName, displayName, onClose })
         // Error event listeners for diagnostics
         jitsiApiRef.current.on('errorOccurred', (error: any) => {
           console.error('❌ Jitsi error occurred:', error);
+          console.error('Error details:', JSON.stringify(error, null, 2));
+
           if (error?.error === 'connection.connectionError') {
             setError('Network connection error. Please check your internet connection and firewall settings.');
+          } else if (error?.error === 'connection.passwordRequired') {
+            setError('Authentication error. The JWT token may be invalid or expired.');
+          } else if (error?.message) {
+            setError(`Jitsi error: ${error.message}`);
           }
         });
 
         jitsiApiRef.current.on('connectionFailed', () => {
-          console.error('❌ Jitsi connection failed - WebRTC connectivity issue');
-          setError('Failed to establish video connection. This may be due to firewall or network restrictions blocking WebRTC.');
+          console.error('❌ Jitsi connection failed - WebRTC/XMPP connectivity issue');
+          setError(
+            'Failed to establish connection to Jitsi server.\n\n' +
+            'Possible causes:\n' +
+            '• XMPP/WebSocket connection blocked\n' +
+            '• JWT authentication failed\n' +
+            '• Prosody service not running\n\n' +
+            'Check Jitsi logs:\n' +
+            'docker compose -f docker-compose.jitsi.yml logs jitsi-prosody\n' +
+            'docker compose -f docker-compose.jitsi.yml logs jitsi-web'
+          );
           clearTimeout(timeoutId);
           setIsLoading(false);
+        });
+
+        jitsiApiRef.current.on('suspendDetected', () => {
+          console.warn('⚠️ Jitsi detected connection suspend');
         });
 
         jitsiApiRef.current.on('participantKickedOut', () => {
