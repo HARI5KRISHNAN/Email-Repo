@@ -35,7 +35,7 @@ const ScheduleMeeting: React.FC<ScheduleMeetingProps> = ({ onJoinMeeting }) => {
 
   const generateMeetingLink = () => {
     const meetingId = Math.random().toString(36).substring(2, 15);
-    const link = `https://meet.pilot180.local/${meetingId}`;
+    const link = `https://meet.jit.si/${meetingId}`;
     setMeetingLink(link);
     setLocation('Online Meeting');
   };
@@ -403,7 +403,7 @@ const ScheduleMeeting: React.FC<ScheduleMeetingProps> = ({ onJoinMeeting }) => {
                 type="url"
                 value={meetingLink}
                 onChange={(e) => setMeetingLink(e.target.value)}
-                placeholder="https://meet.pilot180.local/..."
+                placeholder="https://meet.jit.si/..."
                 className="flex-1 px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
               <button
@@ -415,9 +415,52 @@ const ScheduleMeeting: React.FC<ScheduleMeetingProps> = ({ onJoinMeeting }) => {
               </button>
             </div>
             {meetingLink && (
-              <p className="mt-2 text-sm text-blue-600">
-                Meeting link: <a href={meetingLink} target="_blank" rel="noopener noreferrer" className="underline">{meetingLink}</a>
-              </p>
+              <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <p className="text-xs font-semibold text-slate-600 uppercase">Meeting Link</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 text-sm text-blue-700 bg-white px-3 py-2 rounded border border-blue-200 font-mono break-all">
+                    {meetingLink}
+                  </code>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(meetingLink);
+                      alert('Meeting link copied to clipboard!');
+                    }}
+                    className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded transition-colors flex items-center gap-2 whitespace-nowrap"
+                    title="Copy link to clipboard"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    Copy
+                  </button>
+                  {onJoinMeeting && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        // Extract meeting ID from link
+                        const match = meetingLink.match(/\/([^\/]+)$/);
+                        if (match) {
+                          const roomName = match[1];
+                          onJoinMeeting({
+                            roomName: roomName,
+                            displayName: 'User'
+                          });
+                        }
+                      }}
+                      className="px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded transition-colors flex items-center gap-2 whitespace-nowrap"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                      Join
+                    </button>
+                  )}
+                </div>
+              </div>
             )}
           </div>
 
