@@ -280,19 +280,35 @@ function App({ keycloak }: KeycloakProps) {
   };
 
   const handleJoinMeeting = (meeting: any) => {
-    // Extract meeting ID from meeting_link if it exists
-    let roomName = meeting.id;
     if (meeting.meeting_link) {
+      // Use embedded VideoCall instead of opening in new tab
+      // This avoids the authentication prompts from meet.jit.si web interface
+      const displayName = keycloak.tokenParsed?.preferred_username || 'Guest';
+
+      // Extract room name from meeting link
+      let roomName = '';
       const match = meeting.meeting_link.match(/\/([^\/]+)$/);
       if (match) {
         roomName = match[1];
       }
-    }
 
-    setActiveVideoCall({
-      roomName: roomName,
-      displayName: keycloak.tokenParsed?.preferred_username || 'User'
-    });
+      if (roomName) {
+        setActiveVideoCall({
+          roomName: roomName,
+          displayName: displayName
+        });
+      } else {
+        // Fallback: open in new tab if can't extract room name
+        window.open(meeting.meeting_link, '_blank', 'noopener,noreferrer');
+      }
+    } else {
+      // Fallback to embedded mode if no meeting link
+      let roomName = meeting.id;
+      setActiveVideoCall({
+        roomName: roomName,
+        displayName: keycloak.tokenParsed?.preferred_username || 'User'
+      });
+    }
   };
 
   const threads = useMemo(() => {
@@ -392,7 +408,10 @@ function App({ keycloak }: KeycloakProps) {
             </div>
           ) : selectedFolder === 'schedule' ? (
             <div className="flex-1 bg-white">
-              <ScheduleMeeting onJoinMeeting={(data) => setActiveVideoCall(data)} />
+              <ScheduleMeeting onJoinMeeting={(data) => {
+                // Use embedded VideoCall instead of opening in new tab
+                setActiveVideoCall(data);
+              }} />
             </div>
           ) : (
             <>
