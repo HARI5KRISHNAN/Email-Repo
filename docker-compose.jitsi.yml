@@ -32,9 +32,9 @@ services:
       # Disable WebSocket, use BOSH only for HTTP setup
       - ENABLE_XMPP_WEBSOCKET=0
 
-      # JVB
+      # JVB - Disable WebSocket for video bridge too
       - JVB_TCP_HARVESTER_DISABLED=true
-      - ENABLE_COLIBRI_WEBSOCKET=1
+      - ENABLE_COLIBRI_WEBSOCKET=0
 
       # Interface
       - DISABLE_HTTPS=1
@@ -126,11 +126,9 @@ services:
       - XMPP_SERVER=jitsi-prosody
       - PUBLIC_URL=http://localhost:8000
 
-      # Colibri
-      - ENABLE_COLIBRI_WEBSOCKET=1
+      # Colibri - Disable WebSocket for HTTP mode
+      - ENABLE_COLIBRI_WEBSOCKET=0
       - COLIBRI_REST_ENABLED=true
-      - JVB_WS_DOMAIN=localhost:8000
-      - JVB_WS_SERVER_ID=jvb1
 
       # Other
       - TZ=UTC
