@@ -19,7 +19,7 @@ export function generateJitsiToken(user, roomName = '*') {
     // JWT standard claims
     aud: 'pilot180-jitsi',
     iss: 'pilot180-jitsi',
-    sub: 'meet.pilot180.local',
+    sub: 'meet.jitsi', // Must match XMPP_DOMAIN in docker-compose.jitsi.yml
     iat: now,
     nbf: now,
     exp: now + (60 * 60 * 2), // Token valid for 2 hours

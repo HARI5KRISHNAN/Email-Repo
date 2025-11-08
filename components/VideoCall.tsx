@@ -208,16 +208,35 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomName, displayName, onClose })
         // Error event listeners for diagnostics
         jitsiApiRef.current.on('errorOccurred', (error: any) => {
           console.error('❌ Jitsi error occurred:', error);
+          console.error('Error details:', JSON.stringify(error, null, 2));
+
           if (error?.error === 'connection.connectionError') {
             setError('Network connection error. Please check your internet connection and firewall settings.');
+          } else if (error?.error === 'connection.passwordRequired') {
+            setError('Authentication error. The JWT token may be invalid or expired.');
+          } else if (error?.message) {
+            setError(`Jitsi error: ${error.message}`);
           }
         });
 
         jitsiApiRef.current.on('connectionFailed', () => {
-          console.error('❌ Jitsi connection failed - WebRTC connectivity issue');
-          setError('Failed to establish video connection. This may be due to firewall or network restrictions blocking WebRTC.');
+          console.error('❌ Jitsi connection failed - WebRTC/XMPP connectivity issue');
+          setError(
+            'Failed to establish connection to Jitsi server.\n\n' +
+            'Possible causes:\n' +
+            '• XMPP/WebSocket connection blocked\n' +
+            '• JWT authentication failed\n' +
+            '• Prosody service not running\n\n' +
+            'Check Jitsi logs:\n' +
+            'docker compose -f docker-compose.jitsi.yml logs jitsi-prosody\n' +
+            'docker compose -f docker-compose.jitsi.yml logs jitsi-web'
+          );
           clearTimeout(timeoutId);
           setIsLoading(false);
+        });
+
+        jitsiApiRef.current.on('suspendDetected', () => {
+          console.warn('⚠️ Jitsi detected connection suspend');
         });
 
         jitsiApiRef.current.on('participantKickedOut', () => {
