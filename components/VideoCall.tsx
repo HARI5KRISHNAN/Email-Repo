@@ -49,9 +49,17 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomName, displayName, onClose })
 
     const initializeJitsi = async () => {
       try {
-        console.log('Loading Jitsi Meet API...');
+        console.log('🎥 Loading Jitsi Meet API...');
+
+        // Check if browser supports required features
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          throw new Error('Your browser does not support camera/microphone access. Please use a modern browser like Chrome, Firefox, or Edge.');
+        }
+
+        console.log('✅ Browser supports media devices');
+
         await loadJitsiScript();
-        console.log('Jitsi API loaded successfully');
+        console.log('✅ Jitsi API loaded successfully');
 
         if (!jitsiContainerRef.current) return;
 
@@ -87,11 +95,19 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomName, displayName, onClose })
             // Ensure guest access
             enableInsecureRoomNameWarning: false,
             enableLobby: false,
-            // Disable analytics to prevent console spam
+            // Enable analytics for better connectivity (STUN/TURN servers)
             analytics: {
-              disabled: true,
+              disabled: false,
             },
-            disableThirdPartyRequests: true,
+            // Allow third-party requests for STUN/TURN servers (needed for WebRTC)
+            disableThirdPartyRequests: false,
+            // P2P settings for better connectivity
+            p2p: {
+              enabled: true,
+              stunServers: [
+                { urls: 'stun:meet-jit-si-turnrelay.jitsi.net:443' }
+              ]
+            },
           },
           interfaceConfigOverwrite: {
             TOOLBAR_BUTTONS: [
@@ -120,7 +136,7 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomName, displayName, onClose })
 
         // Event listeners
         jitsiApiRef.current.on('videoConferenceJoined', () => {
-          console.log('User joined the video conference');
+          console.log('✅ User joined the video conference successfully');
           clearTimeout(timeoutId);
           setIsLoading(false);
         });
@@ -135,9 +151,30 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomName, displayName, onClose })
           onClose();
         });
 
+        // Error event listeners for diagnostics
+        jitsiApiRef.current.on('errorOccurred', (error: any) => {
+          console.error('❌ Jitsi error occurred:', error);
+          if (error?.error === 'connection.connectionError') {
+            setError('Network connection error. Please check your internet connection and firewall settings.');
+          }
+        });
+
+        jitsiApiRef.current.on('connectionFailed', () => {
+          console.error('❌ Jitsi connection failed - WebRTC connectivity issue');
+          setError('Failed to establish video connection. This may be due to firewall or network restrictions blocking WebRTC.');
+          clearTimeout(timeoutId);
+          setIsLoading(false);
+        });
+
+        jitsiApiRef.current.on('participantKickedOut', () => {
+          console.log('Participant was kicked out');
+          setError('You were removed from the meeting.');
+          onClose();
+        });
+
         // Hide loading when iframe is ready
         jitsiApiRef.current.on('iframeReady', () => {
-          console.log('Jitsi iframe ready');
+          console.log('✅ Jitsi iframe ready');
           // Give it 2 more seconds then hide loading
           setTimeout(() => {
             setIsLoading(false);

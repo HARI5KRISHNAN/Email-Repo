@@ -91,17 +91,18 @@ const ScheduleMeeting: React.FC<ScheduleMeetingProps> = ({ onJoinMeeting }) => {
 
     // Use setTimeout to ensure video call launches first
     setTimeout(() => {
-      api.post('/meetings', {
+      api.post('/mail/calendar/meetings', {
         title: 'Instant Meeting',
         description: 'Quick video conference',
         start_time: now.toISOString(),
         end_time: endTime.toISOString(),
         location: 'Online Meeting',
         meeting_link: link,
-        attendees: []
+        attendees: [],
+        send_invitations: false
       }).catch(err => {
         // Silently fail - video call already launched
-        console.log('Note: Meeting not saved to calendar (optional feature)');
+        console.log('Note: Meeting not saved to calendar (optional feature)', err.response?.status);
       });
     }, 100);
   };
