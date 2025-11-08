@@ -35,6 +35,28 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomName, displayName, onClose })
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
 
+    // Check if Jitsi server is reachable
+    const checkJitsiServer = async () => {
+      try {
+        console.log('🔍 Checking Jitsi server availability...');
+        const healthCheckUrl = `http://${jitsiDomain}:${jitsiPort}/`;
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
+        const response = await fetch(healthCheckUrl, {
+          method: 'HEAD',
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
+        console.log('✅ Jitsi server is reachable');
+        return true;
+      } catch (err) {
+        console.error('❌ Jitsi server is not reachable:', err);
+        return false;
+      }
+    };
+
     // Fetch JWT token from backend
     const fetchJitsiToken = async () => {
       try {
@@ -74,7 +96,20 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomName, displayName, onClose })
 
     const initializeJitsi = async () => {
       try {
-        // First, fetch the JWT token
+        // First, check if Jitsi server is reachable
+        const serverReachable = await checkJitsiServer();
+        if (!serverReachable) {
+          setError(
+            `Jitsi video server is not running or not accessible at ${jitsiDomain}:${jitsiPort}.\n\n` +
+            `To start the Jitsi server, run:\n` +
+            `docker compose -f docker-compose.jitsi.yml up -d\n\n` +
+            `Then refresh this page.`
+          );
+          setIsLoading(false);
+          return;
+        }
+
+        // Fetch the JWT token
         const token = await fetchJitsiToken();
         if (!token) {
           setIsLoading(false);
@@ -321,15 +356,17 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomName, displayName, onClose })
 
       {/* Error State */}
       {error && (
-        <div className="absolute inset-0 bg-gray-900 flex items-center justify-center z-10">
-          <div className="text-center max-w-md">
+        <div className="absolute inset-0 bg-gray-900 flex items-center justify-center z-10 p-4">
+          <div className="text-center max-w-2xl">
             <div className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
               <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </div>
-            <p className="text-white text-lg mb-2">Connection Failed</p>
-            <p className="text-gray-400 text-sm mb-4">{error}</p>
+            <p className="text-white text-lg font-semibold mb-4">Video Call Failed</p>
+            <div className="bg-gray-800 border border-red-500/30 rounded-lg p-4 mb-6 text-left">
+              <p className="text-red-400 text-sm font-mono whitespace-pre-wrap">{error}</p>
+            </div>
             <button
               onClick={onClose}
               className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg"
