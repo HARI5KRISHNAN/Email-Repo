@@ -35,7 +35,7 @@ const ScheduleMeeting: React.FC<ScheduleMeetingProps> = ({ onJoinMeeting }) => {
 
   const generateMeetingLink = () => {
     const meetingId = Math.random().toString(36).substring(2, 15);
-    const link = `https://meet.pilot180.local/${meetingId}`;
+    const link = `https://meet.jit.si/${meetingId}`;
     setMeetingLink(link);
     setLocation('Online Meeting');
   };
@@ -403,7 +403,7 @@ const ScheduleMeeting: React.FC<ScheduleMeetingProps> = ({ onJoinMeeting }) => {
                 type="url"
                 value={meetingLink}
                 onChange={(e) => setMeetingLink(e.target.value)}
-                placeholder="https://meet.pilot180.local/..."
+                placeholder="https://meet.jit.si/..."
                 className="flex-1 px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
               <button
