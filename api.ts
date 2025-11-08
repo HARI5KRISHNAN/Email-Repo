@@ -11,13 +11,17 @@ api.interceptors.request.use(async (config) => {
     // Refresh token if it's about to expire
     if (keycloak.isTokenExpired()) {
       try {
+        console.log('🔄 Refreshing expired Keycloak token...');
         await keycloak.updateToken(30);
+        console.log('✅ Token refreshed successfully');
       } catch (error) {
-        console.error("Failed to refresh token", error);
+        console.error("❌ Failed to refresh token", error);
         keycloak.login();
       }
     }
     config.headers.Authorization = `Bearer ${keycloak.token}`;
+  } else {
+    console.warn('⚠️ No Keycloak token available for request:', config.url);
   }
   return config;
 });

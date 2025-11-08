@@ -47,9 +47,18 @@ const VideoCall: React.FC<VideoCallProps> = ({ roomName, displayName, onClose })
         } else {
           throw new Error('Failed to get Jitsi token');
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error('❌ Failed to fetch Jitsi token:', err);
-        setError('Failed to authenticate with video server. Please try again.');
+        console.error('Error response:', err.response);
+
+        if (err.response?.status === 401) {
+          setError(
+            'Authentication failed. Your session may have expired.\n\n' +
+            'Please refresh the page and log in again.'
+          );
+        } else {
+          setError(`Failed to authenticate with video server: ${err.message}`);
+        }
         return null;
       }
     };
